@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.489
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FuReaderDemo", "FuReaderDemo\FuReaderDemo.csproj", "{367E997D-D54F-4A40-8D11-3DE26D67AE12}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCPClient", "TCPClient\TCPClient.csproj", "{DB980880-8E13-4F36-965C-1793821DB791}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{367E997D-D54F-4A40-8D11-3DE26D67AE12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{367E997D-D54F-4A40-8D11-3DE26D67AE12}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{367E997D-D54F-4A40-8D11-3DE26D67AE12}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{367E997D-D54F-4A40-8D11-3DE26D67AE12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB980880-8E13-4F36-965C-1793821DB791}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB980880-8E13-4F36-965C-1793821DB791}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB980880-8E13-4F36-965C-1793821DB791}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB980880-8E13-4F36-965C-1793821DB791}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B622BE53-E70C-48C2-8E00-39F1D0126EB0}
+	EndGlobalSection
+EndGlobal
