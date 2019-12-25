@@ -64,6 +64,8 @@
     <Compile Include="ByteConv.cs" />
     <Compile Include="ByteFormat.cs" />
     <Compile Include="CollUtil.cs" />
+    <Compile Include="Freq.cs" />
+    <Compile Include="IpAddressConfig.cs" />
     <Compile Include="SerialTransport.cs" />
     <Compile Include="SerialTransportTCP.cs" />
     <Page Include="MainWindow.xaml">
