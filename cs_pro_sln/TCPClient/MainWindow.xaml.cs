@@ -1,10 +1,14 @@
-﻿using NetAPI;
+﻿using Microsoft.Win32;
+using NetAPI;
 using NetAPI.Core;
 using NetAPI.Entities;
 using NetAPI.Protocol.VRP;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Management;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -19,17 +23,29 @@ namespace TCPClient
         string server_ip = null;
         int server_port = 0;
 
+        /// <summary>
+        /// Delegates 
+        /// </summary>
+        delegate void del();
+        private delegate void EmptyDelegate();
+
+        LogUtils logUtils = new LogUtils();
+        TagDatabase tagdb = new TagDatabase();
+
         public MainWindow()
         {
             InitializeComponent();
-            param_stackpanel.Visibility = Visibility.Collapsed;
+            IsTagRead_stackpanel.Visibility = Visibility.Collapsed;
+            IsTagInventory_stackpanel.Visibility = Visibility.Collapsed;
             connect_type_combobox.ItemsSource = null;
             connect_type_combobox.Items.Clear();
             connect_type_combobox.ItemsSource = InitConnectType();
             connect_type_combobox.SelectedIndex = 0;
+
+            InitUI();
             //InitCmdList();
         }
-
+        
         private IEnumerable InitConnectType()
         {
             List<string> list = new List<string>();
@@ -347,7 +363,7 @@ namespace TCPClient
                 ConnectResponse connectRespone = reader.Connect();
                 if(connectRespone.IsSucessed)
                 {
-                    Log(string.Format("connectRespone.IsSucessed={0}", connectRespone.IsSucessed));
+                    logUtils.Log(string.Format("connectRespone.IsSucessed={0}", connectRespone.IsSucessed));
                     reader.OnBrokenNetwork += OnVPRBrokenNetwork;
                     bool ret = false;
                     MsgPowerOff powerOff = new MsgPowerOff();
@@ -355,6 +371,8 @@ namespace TCPClient
                     if(ret)
                     {
                         InitStatus();
+                        TagResults.dgTagResults.ItemsSource = null;
+                        TagResults.dgTagResults.ItemsSource = tagdb.TagList;
                     }
                     else
                     {
@@ -375,7 +393,7 @@ namespace TCPClient
                 }
                 else
                 {
-                    Log(string.Format("connectRespone.ErrorInfo={0}, {1}", 
+                    logUtils.Log(string.Format("connectRespone.ErrorInfo={0}, {1}", 
                         connectRespone.ErrorInfo.ErrCode,
                         connectRespone.ErrorInfo.ErrMsg));
                     vboto_connect_button.Content = "Connect";
@@ -402,6 +420,24 @@ namespace TCPClient
         private void Vboto_clear_button_Click(object sender, RoutedEventArgs e)
         {
             msg_get_listview.Items.Clear();
+            Thread st = new Thread(delegate ()
+            {
+                this.Dispatcher.BeginInvoke(new ThreadStart(delegate ()
+                {
+                    lock (tagdb)
+                    {
+                        tagdb.Clear();
+                        tagdb.Repaint();
+                    }
+                }
+                ));
+                Dispatcher.BeginInvoke(new ThreadStart(delegate ()
+                {
+                    tagcount_label.Content = string.Format("UniqueTags={0}, TotalReadCounts={1}", tagdb.UniqueTagCount, tagdb.TotalTagCount);
+                }));
+
+            });
+            st.Start();
         }
 
         private void InitStatus()
@@ -428,7 +464,7 @@ namespace TCPClient
             bool ret = false;
             MsgReaderCapabilityQuery msgReaderCapabilityQuery = new MsgReaderCapabilityQuery();
             ret = reader.Send(msgReaderCapabilityQuery);
-            Log(string.Format("msgReaderCapabilityQuery: {0}", ret));
+            logUtils.Log(string.Format("msgReaderCapabilityQuery: {0}", ret));
             if (ret)
             {
                 return string.Format("Model={0},Count={1},[{2},{3}]",
@@ -449,7 +485,7 @@ namespace TCPClient
             bool ret = false;
             MsgReaderCapabilityQuery msgReaderCapabilityQuery = new MsgReaderCapabilityQuery();
             ret = reader.Send(msgReaderCapabilityQuery);
-            Log(string.Format("msgReaderCapabilityQuery: {0}", ret));
+            logUtils.Log(string.Format("msgReaderCapabilityQuery: {0}", ret));
             if (ret)
             {
 
@@ -480,7 +516,7 @@ namespace TCPClient
             bool ret = false;
             MsgFrequencyConfig msgFrequencyConfig = new MsgFrequencyConfig();
             ret = reader.Send(msgFrequencyConfig);
-            Log(string.Format("msgGetFrequencyConfig: {0}", ret));
+            logUtils.Log(string.Format("msgGetFrequencyConfig: {0}", ret));
             if (ret)
             {
 
@@ -497,7 +533,7 @@ namespace TCPClient
             bool ret = false;
             MsgAirProtocolConfig msgAirProtocolConfig = new MsgAirProtocolConfig();
             ret = reader.Send(msgAirProtocolConfig);
-            Log(string.Format("Get AirProtocolConfig: {0}", ret));
+            logUtils.Log(string.Format("Get AirProtocolConfig: {0}", ret));
             if (ret)
             {
                 return msgAirProtocolConfig.ReceivedMessage.Protocol;
@@ -514,10 +550,10 @@ namespace TCPClient
             bool ret = false;
             MsgAirProtocolConfig msgAirProtocolConfig = new MsgAirProtocolConfig(protocol);
             ret = reader.Send(msgAirProtocolConfig);
-            Log(string.Format("msgSetAirProtocolConfig: {0}", ret));
+            logUtils.Log(string.Format("msgSetAirProtocolConfig: {0}", ret));
             if (ret)
             {
-                Log(string.Format("Set AirProtocolConfig {0} success", protocol));
+                logUtils.Log(string.Format("Set AirProtocolConfig {0} success", protocol));
             }
             else
             {
@@ -530,7 +566,7 @@ namespace TCPClient
             bool ret = false;
             MsgUhfBandConfig msgUhfBandConfig = new MsgUhfBandConfig();
             ret = reader.Send(msgUhfBandConfig);
-            Log(string.Format("Get Region (UhfBandConfig): {0}", ret));
+            logUtils.Log(string.Format("Get Region (UhfBandConfig): {0}", ret));
             if (ret)
             {
                 return msgUhfBandConfig.ReceivedMessage.UhfBand;
@@ -547,7 +583,7 @@ namespace TCPClient
             bool ret = false;
             MsgRs232BaudRateConfig msgRs232BaudRateConfig = new MsgRs232BaudRateConfig();
             ret = reader.Send(msgRs232BaudRateConfig);
-            Log(string.Format("msgGetRs232BaudRateConfig: {0}", ret));
+            logUtils.Log(string.Format("msgGetRs232BaudRateConfig: {0}", ret));
             if (ret)
             {
                 return msgRs232BaudRateConfig.ReceivedMessage.RS232BaudRate;
@@ -566,7 +602,7 @@ namespace TCPClient
             bool ret = false;
             MsgRs232BaudRateConfig msgRs232BaudRateConfig = new MsgRs232BaudRateConfig(baudRate);
             ret = reader.Send(msgRs232BaudRateConfig);
-            Log(string.Format("msgSetRs232BaudRateConfig: {0}", ret));
+            logUtils.Log(string.Format("msgSetRs232BaudRateConfig: {0}", ret));
             if (ret)
             {
                 
@@ -583,19 +619,19 @@ namespace TCPClient
             bool ret = false;
             MsgRfidStatusQuery msgRfidStatusQuery = new MsgRfidStatusQuery();
             ret = reader.Send(msgRfidStatusQuery);
-            Log(string.Format("msgRfidStatusQuery: {0}", ret));
+            logUtils.Log(string.Format("msgRfidStatusQuery: {0}", ret));
             if (ret)
             {
-                Log(string.Format("Protocol:{0}", msgRfidStatusQuery.ReceivedMessage.Protocol));
-                Log(string.Format("Region:{0}", msgRfidStatusQuery.ReceivedMessage.UhfBand));
-                Log(string.Format("Status:{0}", msgRfidStatusQuery.ReceivedMessage.Status));
+                logUtils.Log(string.Format("Protocol:{0}", msgRfidStatusQuery.ReceivedMessage.Protocol));
+                logUtils.Log(string.Format("Region:{0}", msgRfidStatusQuery.ReceivedMessage.UhfBand));
+                logUtils.Log(string.Format("Status:{0}", msgRfidStatusQuery.ReceivedMessage.Status));
                 
 
                 foreach (AntennaPowerStatus antenna in msgRfidStatusQuery.ReceivedMessage.Antennas)
                 {
                     if(antenna.AntennaNO <= 4)
                     {
-                        Log(string.Format("antennaPower [{0}, {1}, {2}]", antenna.AntennaNO, antenna.IsEnable, antenna.PowerValue));
+                        logUtils.Log(string.Format("antennaPower [{0}, {1}, {2}]", antenna.AntennaNO, antenna.IsEnable, antenna.PowerValue));
                         list.Add(antenna);
                     }
                 }
@@ -607,6 +643,8 @@ namespace TCPClient
             return list;
         }
 
+        
+
         // TagInventory 
         private void Vboto_scan_epc_button_Click(object sender, RoutedEventArgs e)
         {
@@ -614,7 +652,8 @@ namespace TCPClient
             {
                 vboto_scan_epc_button.Content = "Scaning";
                 reader.OnInventoryReceived += OnVRPInventoryReceived;
-                ScanEPC();
+                tagdb.UniqueByteTID = is_unique_by_membank_checkbox.IsChecked.Value;
+                ScanEPC((bool)IsTagInventory_use_param_checkbox.IsChecked);
             }
             else if (vboto_scan_epc_button.Content.Equals("Scaning"))
             {
@@ -622,7 +661,7 @@ namespace TCPClient
                 reader.OnInventoryReceived -= OnVRPInventoryReceived;
                 bool ret = false;
                 ret = reader.Send(new MsgPowerOff());
-                Log(string.Format("msgPowerOff: {0}", ret));
+                logUtils.Log(string.Format("msgPowerOff: {0}", ret));
                 if (ret)
                 {
                     
@@ -634,9 +673,83 @@ namespace TCPClient
             }
         }
 
-        private void ScanEPC()
+        private void ScanEPC(bool IsSetParam)
         {
-            TagInventory();
+            if (IsSetParam == true)
+            {
+                InventoryTagParameter param = new InventoryTagParameter();
+                //public ushort ReadCount;
+                //public ushort TotalReadTime;
+                //public ushort TagFilteringTime;
+                //public ushort ReadTime;
+                //public ushort StopTime;
+                //public ushort IdleTime;
+                //public TagParameter SelectTagParam;
+                TagParameter tagParameter = null;
+                if (is_MemBank_use_checkbox.IsChecked == true)
+                {
+                    tagParameter = new TagParameter();
+                    MemoryBank_combobox.SelectedIndex = MemoryBank_combobox.Items.IndexOf(MemoryBank.EPCMemory);// Not set TID
+                    tagParameter.Ptr = Convert.ToUInt16(MemoryBank_startaddr_textbox.Text);
+                    tagParameter.TagData = ByteFormat.FromHex(MemoryBank_data_textbox.Text);
+                    logUtils.Log(string.Format("TagData {0}", ByteFormat.ToHex(tagParameter.TagData, "", " ")));
+                }
+
+                param.SelectTagParam = tagParameter;
+                
+                param.ReadTime = Convert.ToUInt16(TagInventory_readtime_textbox.Text);
+                param.StopTime = Convert.ToUInt16(TagInventory_stoptime_textbox.Text);
+
+                param.TotalReadTime = Convert.ToUInt16(TagInventory_totalreadtime_textbox.Text);
+
+                param.ReadCount = Convert.ToUInt16(TagInventory_readcount_textbox.Text);
+
+                param.IdleTime = Convert.ToUInt16(TagInventory_idletime_textbox.Text);
+
+                param.TagFilteringTime = Convert.ToUInt16(TagInventory_tagfilteringtime_textbox.Text);
+
+                TagInventory(param);
+            }
+            else
+            {
+                TagInventory();
+            }
+        }
+
+        private void Scan(bool IsSetParam)
+        {
+            if (IsSetParam == true)
+            {
+                ReadTagParameter param = new ReadTagParameter();
+                param.IsLoop = (bool)isloop_checkbox.IsChecked;
+                param.AccessPassword = new byte[] { 0x00, 0x00, 0x00, 0x00 };
+                param.IsReturnEPC = (bool)epc_checkbox.IsChecked;
+                param.IsReturnTID = (bool)tid_checkbox.IsChecked;// 32 ～112bits
+                param.IsReturnReserved = (bool)reserved_checkbox.IsChecked; // kill pass + access pass
+                if ((bool)user_checkbox.IsChecked)
+                {
+                    param.UserPtr = Convert.ToUInt32(userptr_textbox.Text);
+                    param.UserLen = Convert.ToByte(userlen_textbox.Text);// 0~127 word，0代表不返回User数据
+                }
+                else
+                {
+                    param.UserPtr = 0;
+                    param.UserLen = 0;
+                }
+                param.ReadCount = Convert.ToUInt16(readcount_textbox.Text);
+
+                param.ReadTime = Convert.ToUInt16(readtime_textbox.Text);
+
+                param.ReadTime = Convert.ToUInt16(totalreadtime_textbox.Text);
+
+                tagdb.Update(param);
+
+                TagRead(param);
+            }
+            else
+            {
+                TagRead();
+            }
         }
 
         private void TagInventory()
@@ -644,14 +757,71 @@ namespace TCPClient
             bool ret = false;
             MsgTagInventory tagInventory = new MsgTagInventory();
             ret = reader.Send(tagInventory);
-            Log(string.Format("TagInventory: {0}", ret));
+            logUtils.Log(string.Format("TagInventory: {0}", ret));
             if (ret == true)
             {
 
             }
             else
             {
-                Log("TagInventory", tagInventory.ErrorInfo);
+                logUtils.Log("TagInventory", tagInventory.ErrorInfo);
+            }
+        }
+
+        private void TagInventory(InventoryTagParameter param)
+        {
+            bool ret = false;
+            MsgTagInventory tagInventory = new MsgTagInventory(param);
+            ret = reader.Send(tagInventory);
+            logUtils.Log(string.Format("TagInventory with param: {0}", ret));
+            if (ret == true)
+            {
+
+            }
+            else
+            {
+                logUtils.Log("TagInventory with param", tagInventory.ErrorInfo);
+            }
+        }
+
+        private void TagRead()
+        {
+        //public bool IsLoop = false;
+        //public byte[] AccessPassword = new byte[4];
+        //public bool IsReturnEPC = false;
+        //public bool IsReturnTID = false;
+        //public UInt32 UserPtr;
+        //public byte UserLen;
+        //public bool IsReturnReserved = false;
+        //public ushort ReadCount = 1;// 注意：此处默认读取 1 次
+        //public ushort ReadTime = 100;
+        bool ret = false;
+            MsgTagRead msgTagRead = new MsgTagRead();
+            ret = reader.Send(msgTagRead);
+            logUtils.Log(string.Format("TagRead: {0}", ret));
+            if (ret == true)
+            {
+
+            }
+            else
+            {
+                logUtils.Log("TagRead", msgTagRead.ErrorInfo);
+            }
+        }
+
+        private void TagRead(ReadTagParameter param)
+        {
+            bool ret = false;
+            MsgTagRead msgTagRead = new MsgTagRead(param);
+            ret = reader.Send(msgTagRead);
+            logUtils.Log(string.Format("TagRead with param: {0}", ret));
+            if (ret == true)
+            {
+
+            }
+            else
+            {
+                logUtils.Log("agRead with param", msgTagRead.ErrorInfo);
             }
         }
 
@@ -661,7 +831,8 @@ namespace TCPClient
             {
                 vboto_scan_button.Content = "Scaning";
                 reader.OnInventoryReceived += OnVRPInventoryReceived;
-                Scan((bool)is_param_checkbox.IsChecked);
+                tagdb.UniqueByteTID = is_unique_by_membank_checkbox.IsChecked.Value;
+                Scan((bool)IsTagRead_use_param_checkbox.IsChecked);
             }
             else if (vboto_scan_button.Content.Equals("Scaning"))
             {
@@ -669,7 +840,7 @@ namespace TCPClient
                 reader.OnInventoryReceived -= OnVRPInventoryReceived;
                 bool ret = false;
                 ret = reader.Send(new MsgPowerOff());
-                Log(string.Format("msgPowerOff: {0}", ret));
+                logUtils.Log(string.Format("msgPowerOff: {0}", ret));
                 if (ret)
                 {
 
@@ -681,24 +852,12 @@ namespace TCPClient
             }
         }
 
-        private void Is_param_checkbox_Click(object sender, RoutedEventArgs e)
-        {
-            if (is_param_checkbox.IsChecked == true)
-            {
-                param_stackpanel.Visibility = Visibility.Visible;
-            }
-            else if (is_param_checkbox.IsChecked == false)
-            {
-                param_stackpanel.Visibility = Visibility.Collapsed;
-            }
-        }
-
         private void Baudrate_combobox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (reader == null)
                 return;
             BaudRate baudRate = (BaudRate)baudrate_combobox.SelectedValue;
-            Log(string.Format("{0}", baudRate));
+            logUtils.Log(string.Format("{0}", baudRate));
             if (GetBaudrate() == baudRate)
             {
                 return;
@@ -718,7 +877,7 @@ namespace TCPClient
             else
             {
                 region = (FrequencyArea)region_combobox.SelectedValue;
-                Log(string.Format("{0}", region));
+                logUtils.Log(string.Format("{0}", region));
                 if (GetRegion() == region)
                 {
                     return;
@@ -740,7 +899,7 @@ namespace TCPClient
             if (reader == null)
                 return;
             AirProtocol protocol = (AirProtocol)protocol_combobox.SelectedValue;
-            Log(string.Format("{0}", protocol));
+            logUtils.Log(string.Format("{0}", protocol));
             if (GetProtocol() == protocol)
             {
                 return;
@@ -754,7 +913,7 @@ namespace TCPClient
         {
             if (reader == null)
                 return;
-            Log(string.Format("{0}", frequency_combobox.SelectedValue));
+            logUtils.Log(string.Format("{0}", frequency_combobox.SelectedValue));
         }
 
         private void Antennas_power_update_Click(object sender, RoutedEventArgs e)
@@ -805,13 +964,15 @@ namespace TCPClient
             MsgReaderVersionQuery msgReaderVersionQuery = new MsgReaderVersionQuery();
             msgReaderVersionQuery.IsReturn = true;
             ret = reader.Send(msgReaderVersionQuery);
-            Log(string.Format("msgReaderVersionQuery: {0}", ret));
+            logUtils.Log(string.Format("msgReaderVersionQuery: {0}", ret));
             if (ret == true)
             {
                 list.Add(string.Format("ModelNumber     : {0}", msgReaderVersionQuery.ReceivedMessage.ModelNumber));
                 list.Add(string.Format("HardwareVersion : {0}", msgReaderVersionQuery.ReceivedMessage.HardwareVersion));
                 list.Add(string.Format("SoftwareVersion : {0}", msgReaderVersionQuery.ReceivedMessage.SoftwareVersion));
-                Log(string.Format("model={0}," +
+                list.Add(string.Format("Reader Type     : {0}", reader.ReaderName));
+                list.Add(string.Format("Reader Name     : {0}", reader.ReaderName, reader));
+                logUtils.Log(string.Format("model={0}," +
                     "\r\nhardware={1}," +
                     "\r\nsoftware={2}",
                     msgReaderVersionQuery.ReceivedMessage.ModelNumber,
@@ -827,117 +988,38 @@ namespace TCPClient
 
         private void OnVRPReaderMessageReceived(AbstractReader reader, IReaderMessage msg)
         {
-            Log(string.Format("OnVRPReaderMessageReceived {0}", reader.ReaderName));
-        }
-
-        private void Scan(bool IsSetParam)
-        {
-            bool ret = false;
-            if(IsSetParam)
-            {
-                ReadTagParameter param = new ReadTagParameter();
-                /***
-                 * public bool IsLoop;
-                 * public byte[] AccessPassword;
-                 * public bool IsReturnEPC;
-                 * public bool IsReturnTID;
-                 * public uint UserPtr;
-                 * public byte UserLen;
-                 * public bool IsReturnReserved;
-                 * public ushort ReadCount;
-                 * public ushort ReadTime;
-                 */
-                param.IsLoop = (bool)isloop_checkbox.IsChecked;
-                param.AccessPassword = new byte[] { 0x00, 0x00, 0x00, 0x00 };
-                param.IsReturnEPC = (bool)epc_checkbox.IsChecked;
-                param.IsReturnTID = (bool)tid_checkbox.IsChecked;// 32 ～112bits
-                param.IsReturnReserved = (bool)reserved_checkbox.IsChecked; // kill pass + access pass
-                if ((bool)user_checkbox.IsChecked)
-                {
-                    param.UserPtr = Convert.ToUInt32(userptr_textbox.Text);
-                    param.UserLen = Convert.ToByte(userlen_textbox.Text);// 0~127 word，0代表不返回User数据
-                }
-                else
-                {
-                    param.UserPtr = 0;
-                    param.UserLen = 0;
-                }
-                param.ReadCount = 0;
-                param.ReadTime = 0;
-                param.TotalReadTime = 1;
-                MsgTagRead msgTagRead = new MsgTagRead(param);
-                ret = reader.Send(msgTagRead);
-                Log(string.Format("ScanTID msgTagRead with param: {0}", ret));
-            }
-            else
-            {
-                MsgTagRead msgTagRead = new MsgTagRead();
-                ret = reader.Send(msgTagRead);
-                Log(string.Format("ScanTID msgTagRead: {0}", ret));
-            }
-
-            if (ret)
-            {
-                
-            }
-            else
-            {
-
-            }
-        }
-        
-        private void Log(string msg)
-        {
-            Console.WriteLine(msg);
-        }
-
-        private void Log(string msg, ErrInfo e)
-        {
-            Console.WriteLine(msg);
-            Log(string.Format("ErrCode:{0}" +
-                "\r\nErrMsg:{1}", e.ErrCode, e.ErrMsg));
-        }
-
-        private void Log(string msg, IReaderMessage e)
-        {
-            Console.WriteLine(msg);
-            Log(string.Format("MessageID:{0}" +
-                "\r\nStatus:{1}" +
-                "\r\nErrorInfo.ErrCode:{2}" +
-                "\r\nErrorInfo.ErrMsg:{3}" +
-                "\r\nReceivedData={4}", e.MessageID, e.Status, e.ErrorInfo.ErrCode, e.ErrorInfo.ErrMsg, ByteFormat.ToHex(e.ReceivedData, "", " ")));
-        }
-
-        private void Log(string msg, RxdTagData tagData)
-        {
-            Console.WriteLine(msg);
-            Log(string.Format("EPC:{0}" +
-                "\r\nTID:{1}" +
-                "\r\nUser:{2}" +
-                "\r\nReserved:{3}" +
-                "\r\nAnetnna:{4}" +
-                "\r\nRSSI:{5}", 
-                ByteFormat.ToHex(tagData.EPC, "", " "), 
-                ByteFormat.ToHex(tagData.TID, "", " "), 
-                ByteFormat.ToHex(tagData.User, "", " "),
-                ByteFormat.ToHex(tagData.Reserved, "", " "), 
-                tagData.Antenna, 
-                tagData.RSSI));
+            logUtils.Log(string.Format("OnVRPReaderMessageReceived {0}", reader.ReaderName));
         }
 
         private void InitVRPReader()
         {
-            readerName = string.Format("VRP Reader {0}", vboto_ip_textbox.Text) ;
             if(connect_type_combobox.SelectedValue.Equals("TCP"))
             {
                 string IP = vboto_ip_textbox.Text;//192.168.8.166
                 int PORT = Convert.ToInt32(vboto_port_textbox.Text.ToString());//8086
+                readerName = string.Format("VRP TCP Reader {0}:{1}", IP, PORT);
                 port = new TcpClientPort(IP, PORT);
             }
             else if (connect_type_combobox.SelectedValue.Equals("RS232"))
             {
-                string portName = string.Format("{0}", rs232_combobox.SelectedValue);//COM1
-                BaudRate baudRate = (BaudRate)baudrate_combobox.SelectedValue;//R115200
+                string portName = string.Format("{0}", rs232_combobox.SelectedValue);
+                readerName = string.Format("VRP RS232 Reader {0}", portName);
+                MatchCollection mc = Regex.Matches(portName, @"(?<=\().+?(?=\))");
+                foreach (Match m in mc)
+                {
+                    if (!string.IsNullOrWhiteSpace(m.ToString()))
+                        portName = m.ToString();
+                }
+                
+                BaudRate baudRate = BaudRate.R115200;
+                if(baudrate_combobox.SelectedIndex < 0)
+                {
+
+                }
+                else
+                {
+                    baudRate = (BaudRate)baudrate_combobox.SelectedValue;
+                }
                 port = new Rs232Port(portName, baudRate);
             }
             else if (connect_type_combobox.SelectedValue.Equals("RS485"))
@@ -949,28 +1031,24 @@ namespace TCPClient
             }
 
             Reader.OnApiException += OnVRPApiException;
-            Reader.OnErrorMessage += OnVRPErrorMessage;
-
-            InitUI();
+            Reader.OnErrorMessage += OnVRPErrorMessage;            
         }
 
         private void InitUI()
         {
             baudrate_combobox.ItemsSource = null;
-            baudrate_combobox.Items.Clear();
             baudrate_combobox.ItemsSource = GetSupportBaudrate();
 
             region_combobox.ItemsSource = null;
-            region_combobox.Items.Clear();
             region_combobox.ItemsSource = GetSupportRegion();
             
             frequency_combobox.ItemsSource = null;
-            frequency_combobox.Items.Clear();
             frequency_combobox.ItemsSource = GetSupportFrequency();
 
             protocol_combobox.ItemsSource = null;
-            protocol_combobox.Items.Clear();
             protocol_combobox.ItemsSource = GetSupportProtocol();
+
+            is_TagInventory_radiobutton.IsChecked = true;
         }
 
         private List<AntennaPowerStatus> GetPowers()
@@ -1002,7 +1080,7 @@ namespace TCPClient
             //设置功率
             MsgPowerConfig msgSetPowerConfig = new MsgPowerConfig(powers);
             ret = reader.Send(msgSetPowerConfig);
-            Log(string.Format("msgSetPowerConfig: {0}", ret));
+            logUtils.Log(string.Format("msgSetPowerConfig: {0}", ret));
             if (ret == true)
             {
 
@@ -1043,7 +1121,7 @@ namespace TCPClient
             
             MsgAntennaConfig msgSetAntennaConfig = new MsgAntennaConfig(antennaStatuses.ToArray());
             ret = reader.Send(msgSetAntennaConfig);
-            Log(string.Format("msgSetUhfBandConfig: {0}", ret));
+            logUtils.Log(string.Format("msgSetUhfBandConfig: {0}", ret));
             if (ret)
             {
 
@@ -1073,10 +1151,10 @@ namespace TCPClient
             //设置Region
             MsgUhfBandConfig msgSetUhfBandConfig = new MsgUhfBandConfig(region);
             ret = reader.Send(msgSetUhfBandConfig);
-            Log(string.Format("msgSetUhfBandConfig: {0}", ret));
+            logUtils.Log(string.Format("msgSetUhfBandConfig: {0}", ret));
             if (ret)
             {
-                Log(string.Format("Set Region {0} success", region));
+                logUtils.Log(string.Format("Set Region {0} success", region));
             }
             else
             {
@@ -1134,23 +1212,36 @@ namespace TCPClient
 
         private void OnVRPErrorMessage(IReaderMessage e)
         {
-            Log(string.Format("{0}:", "OnVRPErrorMessage"), e);
+            logUtils.Log(string.Format("{0}:", "OnVRPErrorMessage"), e);
         }
         
         private void OnVRPApiException(string senderName, ErrInfo e)
         {
-            Log(string.Format("{0}: {1}", "OnVRPApiException", senderName), e);
+            logUtils.Log(string.Format("{0}: {1}", "OnVRPApiException", senderName), e);
         }
 
         private void OnVPRBrokenNetwork(string senderName, ErrInfo e)
         {
-            Log(string.Format("{0}: {1}", "OnVPRBrokenNetwork", senderName), e);
+            logUtils.Log(string.Format("{0}: {1}", "OnVPRBrokenNetwork", senderName), e);
         }
 
         private void OnVRPInventoryReceived(string readerName, RxdTagData tagData)
         {
-            
-            Log(string.Format("{0}: {1}", "OnVRPInventoryReceived", readerName), tagData);
+            PrintTag(tagData);
+        }
+
+        private void PrintTag(RxdTagData tagData)
+        {
+            Dispatcher.BeginInvoke(new ThreadStart(delegate ()
+            {
+                tagdb.Add(tagData);
+                tagdb.Repaint();
+            }));
+
+            Dispatcher.BeginInvoke(new ThreadStart(delegate ()
+            {
+                tagcount_label.Content = string.Format("UniqueTags={0}, TotalReadCounts={1}", tagdb.UniqueTagCount, tagdb.TotalTagCount);
+            }));
         }
 
 
@@ -1165,17 +1256,93 @@ namespace TCPClient
                     tcp_stackpanel.Visibility = Visibility.Visible;
                     rs232_stackpanel.Visibility = Visibility.Collapsed;
                     rs485_combobox.Visibility = Visibility.Collapsed;
+                    baudrate_combobox.IsEnabled = false;
                     break;
                 case "RS232":
                     tcp_stackpanel.Visibility = Visibility.Collapsed;
                     rs232_stackpanel.Visibility = Visibility.Visible;
                     rs485_combobox.Visibility = Visibility.Collapsed;
+                    baudrate_combobox.IsEnabled = true;
+                    UpdateRs232();
                     break;
                 case "RS485":
                     tcp_stackpanel.Visibility = Visibility.Collapsed;
                     rs232_stackpanel.Visibility = Visibility.Collapsed;
                     rs485_combobox.Visibility = Visibility.Visible;
+                    baudrate_combobox.IsEnabled = false;
                     break;
+            }
+        }
+
+        private void UpdateRs232()
+        {
+            logUtils.Log("########### UpdateRs232");
+            rs232_combobox.ItemsSource = null;
+            rs232_combobox.ItemsSource = GetComPortNames();
+            if(rs232_combobox.Items.Count > 0)
+            {
+                rs232_combobox.SelectedIndex = 0;
+            }
+        }
+
+        /// <summary>
+        /// Returns the COM port names as list
+        /// </summary>
+        private List<string> GetComPortNames()
+        {
+            List<string> portNames = new List<string>();
+            using (var searcher = new ManagementObjectSearcher("root\\CIMV2", "SELECT * FROM Win32_PnPEntity WHERE ConfigManagerErrorCode = 0"))
+            {
+                foreach (ManagementObject queryObj in searcher.Get())
+                {
+                    if ((queryObj != null) && (queryObj["Name"] != null))
+                    {
+                        if (queryObj["Name"].ToString().Contains("(COM"))
+                            portNames.Add(queryObj["Name"].ToString());
+                    }
+                }
+            }
+            return portNames;
+        }
+
+        public List<string> GetComList()
+        {
+            try
+            {
+                
+                RegistryKey keyCom = Registry.LocalMachine.OpenSubKey("Hardware\\DeviceMap\\SerialComm");
+
+                List<string> portNames = new List<string>();
+                portNames.AddRange(keyCom.GetValueNames());
+                return portNames;
+            }
+            catch (Exception e)
+            {
+                return null;
+            }
+        }
+
+        public List<string> GetPort()
+        {
+            try
+            {
+                RegistryKey hklm = Registry.LocalMachine;
+
+                RegistryKey software11 = hklm.OpenSubKey("HARDWARE");
+
+                //打开"HARDWARE"子健
+                RegistryKey software = software11.OpenSubKey("DEVICEMAP");
+
+                RegistryKey sitekey = software.OpenSubKey("SERIALCOMM");
+
+                List<string> portNames = new List<string>();
+                portNames.AddRange(sitekey.GetValueNames());
+                return portNames;
+
+            }
+            catch (Exception e)
+            {
+                return null;
             }
         }
 
@@ -1199,7 +1366,7 @@ namespace TCPClient
             {
                 byte antNo = Convert.ToByte(cb.Content);
                 bool antEnable = cb.IsChecked.Value;
-                Log(string.Format("antNo={0}, {1}", antNo, antEnable));
+                logUtils.Log(string.Format("antNo={0}, {1}", antNo, antEnable));
                 AntennaStatus ant = new AntennaStatus();
                 ant.AntennaNO = antNo;
                 ant.IsEnable = antEnable;
@@ -1209,7 +1376,7 @@ namespace TCPClient
             AntennaStatus[] antennas = antennasList.ToArray();
             MsgAntennaConfig msgAntennaConfig = new MsgAntennaConfig(antennas);
             ret = reader.Send(msgAntennaConfig);
-            Log(string.Format("msgAntennaConfig: {0}", ret));
+            logUtils.Log(string.Format("msgAntennaConfig: {0}", ret));
             if (ret == true)
             {
 
@@ -1436,12 +1603,12 @@ namespace TCPClient
             if(FrequencyConfig_region_combobox.SelectedValue.ToString().Equals("CN"))
             {
                 SetRegion(FrequencyArea.CN);
-                Log("+++++++++++++" + FrequencyConfig_region_combobox.SelectedValue);
+                logUtils.Log("+++++++++++++" + FrequencyConfig_region_combobox.SelectedValue);
                 foreach (FreqCN freqCN in FrequencyConfig_FreqTable_combobox.ItemsSource)
                 {
                     if (freqCN.FreqIsChecked == true)
                     {
-                        Log(string.Format("{0}, {1}", freqCN.Freq, freqCN.FreqIsChecked));
+                        logUtils.Log(string.Format("{0}, {1}", freqCN.Freq, freqCN.FreqIsChecked));
                         list.Add((byte)freqCN.Freq);
                     }
                 }
@@ -1449,12 +1616,12 @@ namespace TCPClient
             else if (FrequencyConfig_region_combobox.SelectedValue.ToString().Equals("FCC"))
             {
                 SetRegion(FrequencyArea.FCC);
-                Log("------------" + FrequencyConfig_region_combobox.SelectedValue);
+                logUtils.Log("------------" + FrequencyConfig_region_combobox.SelectedValue);
                 foreach (FreqFCC freqFCC in FrequencyConfig_FreqTable_combobox.ItemsSource)
                 {
                     if (freqFCC.FreqIsChecked == true)
                     {
-                        Log(string.Format("{0}, {1}", freqFCC.Freq, freqFCC.FreqIsChecked));
+                        logUtils.Log(string.Format("{0}, {1}", freqFCC.Freq, freqFCC.FreqIsChecked));
                         list.Add((byte)freqFCC.Freq);
                     }
                 }
@@ -1478,7 +1645,7 @@ namespace TCPClient
         // FrequencyConfig
         private void Msg_tabitem_Loaded(object sender, RoutedEventArgs e)
         {
-            Log("################");
+            logUtils.Log("################");
             FrequencyConfig_region_combobox.ItemsSource = null;
             FrequencyConfig_region_combobox.Items.Clear();
             FrequencyConfig_region_combobox.ItemsSource = GetSupportRegion();
@@ -1714,7 +1881,7 @@ namespace TCPClient
             bool ret = false;
             MsgMacConfig msgMacConfig = new MsgMacConfig();
             ret = reader.Send(msgMacConfig);
-            Log(string.Format("Get MacConfig: {0}", ret));
+            logUtils.Log(string.Format("Get MacConfig: {0}", ret));
             if (ret == true)
             {
                 return string.Format("MacConfig Mac Addr={0}", msgMacConfig.ReceivedMessage.getStringMAC());
@@ -1744,7 +1911,7 @@ namespace TCPClient
             bool ret = false;
             Msg6CTagFieldConfig msg6CTagFieldConfig = new Msg6CTagFieldConfig();
             ret = reader.Send(msg6CTagFieldConfig);
-            Log(string.Format("Get 6CTagFieldConfig: {0}", ret));
+            logUtils.Log(string.Format("Get 6CTagFieldConfig: {0}", ret));
             if (ret == true)
             {
                 return string.Format("6CTagFieldConfig IsEnableAntenna={0}, IsEnableRSSI={1}", 
@@ -1763,7 +1930,7 @@ namespace TCPClient
             bool ret = false;
             Msg6CTagFieldConfig msg6CTagFieldConfig = new Msg6CTagFieldConfig(IsEnableAntenna, IsEnableRSSI);
             ret = reader.Send(msg6CTagFieldConfig);
-            Log(string.Format("Get 6CTagFieldConfig: {0}", ret));
+            logUtils.Log(string.Format("Get 6CTagFieldConfig: {0}", ret));
             if (ret == true)
             {
                 return string.Format("6CTagFieldConfig IsEnableAntenna={0}, IsEnableRSSI={1} success", IsEnableAntenna, IsEnableRSSI);
@@ -1775,5 +1942,271 @@ namespace TCPClient
             }
         }
 
+        private void Is_TagInventory_radiobutton_Checked(object sender, RoutedEventArgs e)
+        {
+            IsTagInventory_stackpanel.Visibility = Visibility.Visible;
+            IsTagRead_stackpanel.Visibility = Visibility.Collapsed;
+            vboto_scan_epc_button.IsEnabled = true;
+            vboto_scan_button.IsEnabled = false;
+
+            MemoryBank_combobox.ItemsSource = null;
+            MemoryBank_combobox.ItemsSource = GetMemoryBank(); ;
+        }
+
+        private IEnumerable GetMemoryBank()
+        {
+            List<MemoryBank> list = new List<MemoryBank>();
+            foreach (MemoryBank bank in Enum.GetValues(typeof(MemoryBank)))
+            {
+                list.Add(bank);
+            }
+            return list;
+        }
+
+        private void Is_TagRead_radiobutton_Checked(object sender, RoutedEventArgs e)
+        {
+            IsTagInventory_stackpanel.Visibility = Visibility.Collapsed;
+            IsTagRead_stackpanel.Visibility = Visibility.Visible;
+            vboto_scan_epc_button.IsEnabled = false;
+            vboto_scan_button.IsEnabled = true;
+        }
+
+        private void Is_MemBank_use_checkbox_Checked(object sender, RoutedEventArgs e)
+        {
+            MemBank_stackpanel.Visibility = Visibility.Visible;
+        }
+
+        private void Is_MemBank_use_checkbox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            MemBank_stackpanel.Visibility = Visibility.Collapsed;
+        }
+
+        private void User_checkbox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            TagRead_user_stackpanel.Visibility = Visibility.Collapsed;
+        }
+
+        private void User_checkbox_Checked(object sender, RoutedEventArgs e)
+        {
+            TagRead_user_stackpanel.Visibility = Visibility.Visible;
+        }
+
+        // TagWrite
+        private void TagWrite_button_Click(object sender, RoutedEventArgs e)
+        {
+            bool isloop = TagWrite_IsLoop_checkbox.IsChecked.Value;
+            byte[] accessPassword = ByteFormat.FromHex(TagWrite_password_textbox.Text);
+            MemoryBank bank = (MemoryBank)TagWrite_select_membank_combobox.SelectedValue;
+            foreach (ToWriteBank twb in TagWrite_selected_combobox.Items)
+            {
+                TagWrite(isloop, accessPassword, bank, twb.StartAddr, twb.Data, UpdateWriteBank());
+            }
+        }
+
+        private List<WriteBank> UpdateWriteBank()
+        {
+            List<WriteBank> wbs = new List<WriteBank>();
+            foreach (WriteBank wb in TagWrite_write_combobox.Items)
+            {
+                wbs.Add(wb);
+            }
+            return wbs;
+        }
+
+        private void TagWrite(bool isloop, byte[] accessPassword, MemoryBank bank, uint startaddr, byte[] data, List<WriteBank> wbs)
+        {
+            WriteTagParameter param = new WriteTagParameter();
+            param.IsLoop = isloop;
+            param.AccessPassword = accessPassword;
+
+            TagParameter selecttagparam = null;
+            selecttagparam = new TagParameter();
+            selecttagparam.MemoryBank = bank;
+            selecttagparam.Ptr = startaddr;
+            selecttagparam.TagData = data;
+
+            param.SelectTagParam = selecttagparam;
+
+            List<TagParameter> list = new List<TagParameter>();
+
+            foreach (WriteBank wb in wbs)
+            {
+                if (wb.IsChecked == true)
+                {
+                    TagParameter w1 = new TagParameter();
+                    w1.MemoryBank = wb.MemBank;
+                    w1.Ptr = wb.StartAddr;
+                    w1.TagData = wb.Data;
+                    logUtils.Log("TagWrite with param", w1);
+                    list.Add(w1);
+                }
+            }
+
+            TagParameter[] writedata = list.ToArray();
+            param.WriteDataAry = writedata;
+            try
+            {
+                TagWrite(param);
+            }
+            catch(Exception e)
+            {
+                logUtils.Log("TagWrite", e);
+            }
+        }
+        
+        private bool TagWrite(WriteTagParameter param)
+        {
+            logUtils.Log("TagWrite with param", param);
+            bool ret = false;
+            MsgTagWrite msgTagWrite = new MsgTagWrite(param);
+            ret = reader.Send(msgTagWrite);
+            logUtils.Log(string.Format("TagWrite: {0}", ret));
+            if (ret == true)
+            {
+                logUtils.Log(string.Format("TagWrite  success"));
+                return true;
+            }
+            else
+            {
+                ErrInfo errInfo = msgTagWrite.ErrorInfo;
+                logUtils.Log(string.Format("TagWrite Error={0}, {1}", errInfo.ErrCode, errInfo.ErrMsg));
+                return false;
+            }
+        }
+
+        private void TagOP_Write_tabitem_Loaded(object sender, RoutedEventArgs e)
+        {
+            TagWrite_selected_combobox.ItemsSource = null;
+            TagWrite_selected_combobox.ItemsSource = GetSelectTagReadList();
+            if (TagWrite_selected_combobox.Items.Count > 0)
+            {
+                TagWrite_selected_combobox.SelectedIndex = 0;
+            }
+
+            TagWrite_select_membank_combobox.ItemsSource = null;
+            TagWrite_select_membank_combobox.ItemsSource = GetMemoryBankForSelect();
+            if(TagWrite_select_membank_combobox.Items.Count>0)
+            {
+                TagWrite_select_membank_combobox.SelectedIndex = 0;
+            }
+
+            TagWrite_write_combobox.ItemsSource = null;
+            TagWrite_write_combobox.ItemsSource = GetWriteBank();
+            if (TagWrite_write_combobox.Items.Count > 0)
+                TagWrite_write_combobox.SelectedIndex = 0;
+
+
+        }
+
+        private IEnumerable GetMemoryBankForSelect()
+        {
+            List<MemoryBank> list = new List<MemoryBank>();
+            foreach (MemoryBank bank in Enum.GetValues(typeof(MemoryBank)))
+            {
+                if (bank == MemoryBank.ReservedMemory)
+                    continue;
+                list.Add(bank);
+            }
+            return list;
+        }
+
+        private List<WriteBank> GetWriteBank()
+        {
+            List<WriteBank> list = new List<WriteBank>();
+            foreach (MemoryBank bank in Enum.GetValues(typeof(MemoryBank)))
+            {
+                if (bank == MemoryBank.TIDMemory)
+                    continue;
+                WriteBank writeBank = new WriteBank();
+                writeBank.MemBank = bank;
+                if (bank == MemoryBank.EPCMemory)
+                {
+                    writeBank.IsChecked = true;
+                    writeBank.StartAddr = 32;
+
+                }
+                else
+                {
+                    writeBank.IsChecked = false;
+                    writeBank.StartAddr = 0;
+
+                }
+                writeBank.DataHexStr = "1122";
+                list.Add(writeBank);
+            }
+            return list;
+        }
+
+        private void TagWrite_select_membank_combobox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            
+        }
+
+        private void TagWrite_update_select_button_Click(object sender, RoutedEventArgs e)
+        {
+            List<TagReadRecord> list = GetSelectTagReadList();
+            
+            TagWrite_selected_combobox.ItemsSource = null;
+            TagWrite_selected_combobox.ItemsSource = GetSelectForWriteList(list, (MemoryBank)TagWrite_select_membank_combobox.SelectedValue);
+            if (TagWrite_selected_combobox.Items.Count > 0)
+            {
+                TagWrite_selected_combobox.SelectedIndex = 0;
+            }
+        }
+
+        private List<ToWriteBank> GetSelectForWriteList(List<TagReadRecord> list, MemoryBank bank)
+        {
+            logUtils.Log(string.Format("GetSelectForWriteList {0}", bank));
+            List<ToWriteBank> towrites = new List<ToWriteBank>();
+            uint start = 0;
+
+            if (bank == MemoryBank.EPCMemory)
+            {
+                start = 32;
+                foreach (TagReadRecord trd in list)
+                {
+                    ToWriteBank twb = new ToWriteBank();
+                    twb.StartAddr = start;
+                    twb.Data = trd.EPC;
+                    towrites.Add(twb);
+                }
+            }
+            else if (bank == MemoryBank.TIDMemory)
+            {
+                start = 0;
+                foreach (TagReadRecord trd in list)
+                {
+                    ToWriteBank twb = new ToWriteBank();
+                    twb.StartAddr = start;
+                    twb.Data = trd.TID;
+                    towrites.Add(twb);
+                }
+            }
+            else if (bank == MemoryBank.UserMemory)
+            {
+                start = 0;
+                foreach (TagReadRecord trd in list)
+                {
+                    ToWriteBank twb = new ToWriteBank();
+                    twb.StartAddr = start;
+                    twb.Data = trd.User;
+                    towrites.Add(twb);
+                }
+            }
+            return towrites;
+        }
+
+        private List<TagReadRecord> GetSelectTagReadList()
+        {
+            List<TagReadRecord> list = new List<TagReadRecord>();
+            foreach (TagReadRecord mf in TagResults.dgTagResults.Items)
+            {
+                if (mf.Checked == true)
+                {
+                    list.Add(mf);
+                }
+            }
+            return list;
+        }
     }
 }

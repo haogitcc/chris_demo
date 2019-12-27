@@ -1,0 +1,35 @@
+﻿<UserControl x:Class="TCPClient.TagResults"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:TCPClient"
+             xmlns:TagResults="clr-namespace:TCPClient" DataContext="{Binding}">
+    <Grid>
+        <DataGrid IsReadOnly="True" ItemsSource="{Binding}" FontFamily="Arial" FontSize="12" Background="White" Name="dgTagResults" AutoGenerateColumns="False">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn>
+                    <DataGridTemplateColumn.HeaderTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="False" Name="headerCheckBox" Checked="HeaderCheckBox_Checked" Unchecked="HeaderCheckBox_Unchecked">
+                            </CheckBox>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.HeaderTemplate>
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding Path=Checked, UpdateSourceTrigger=PropertyChanged}" Name="theCheckbox"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn x:Name="serialNoColumn" Header="#" />
+                <DataGridTextColumn x:Name="epcColumn"/>
+                <DataGridTextColumn x:Name="tidColumn"/>
+                <DataGridTextColumn x:Name="reservedColumn"/>
+                <DataGridTextColumn x:Name="userColumn"/>
+                <DataGridTextColumn x:Name="rssiColumn"/>
+                <DataGridTextColumn x:Name="readcountColumn"/>
+                <DataGridTextColumn x:Name="readtimeColumn"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

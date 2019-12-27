@@ -43,6 +43,9 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -66,8 +69,16 @@
     <Compile Include="CollUtil.cs" />
     <Compile Include="Freq.cs" />
     <Compile Include="IpAddressConfig.cs" />
+    <Compile Include="LogUtils.cs" />
     <Compile Include="SerialTransport.cs" />
     <Compile Include="SerialTransportTCP.cs" />
+    <Compile Include="SortableBindingList.cs" />
+    <Compile Include="TagDatabase.cs" />
+    <Compile Include="TagResults.xaml.cs">
+      <DependentUpon>TagResults.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ToWriteBank.cs" />
+    <Compile Include="WriteBank.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -80,6 +91,10 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="TagResults.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
