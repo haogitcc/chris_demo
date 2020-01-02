@@ -1,6 +1,6 @@
 ﻿namespace TCPClient
 {
-    public class ToWriteBank
+    public class ToExecuteTagOp
     {
         uint startaddr = 0;
         byte[] data = null;

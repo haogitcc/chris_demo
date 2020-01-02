@@ -1,18 +1,8 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace TCPClient
 {
@@ -60,7 +50,11 @@ namespace TCPClient
             userColumn.Binding = new Binding("userString");
             userColumn.Header = "User";
             userColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
-            
+
+            timeStampColumn.Binding = new Binding("TimeStamp");
+            timeStampColumn.Header = "TimeStamp";
+            timeStampColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+
             rssiColumn.Binding = new Binding("RSSI");
             rssiColumn.Header = "RSSI(dBm)";
             rssiColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
@@ -69,9 +63,21 @@ namespace TCPClient
             readcountColumn.Header = "ReadCount";
             readcountColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
 
-            //readtimeColumn.Binding = new Binding("ReadTime");
-            //readtimeColumn.Header = "ReadTime";
-            //readtimeColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+            antennaColumn.Binding = new Binding("Antenna");
+            antennaColumn.Header = "Antenna";
+            antennaColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+
+            protocolColumn.Binding = new Binding("Protocol");
+            protocolColumn.Header = "Protocol";
+            protocolColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+
+            frequencyColumn.Binding = new Binding("Frequency");
+            frequencyColumn.Header = "Frequency";
+            frequencyColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
+
+            phaseColumn.Binding = new Binding("Phase");
+            phaseColumn.Header = "Phase";
+            phaseColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
 
             dgTagResults.ItemsSource = _tagList;
         }
@@ -93,6 +99,71 @@ namespace TCPClient
                 mf.Checked = IsChecked;
             }
             dgTagResults.Items.Refresh();
+        }
+
+        /// <summary>
+        /// Retain aged tag cell colour
+        /// </summary>
+        public Dictionary<string, Brush> tagagingColourCache = new Dictionary<string, Brush>();
+        private void dgTagResults_LoadingRow(object sender, DataGridRowEventArgs e)
+        {
+            //try
+            //{
+            //    if (chkEnableTagAging)
+            //    {
+            //        var data = (TagReadRecord)e.Row.DataContext;
+            //        TimeSpan difftimeInSeconds = (DateTime.UtcNow - data.TimeStamp.ToUniversalTime());
+            //        BrushConverter brush = new BrushConverter();
+            //        if (enableTagAgingOnRead)
+            //        {
+            //            if (difftimeInSeconds.TotalSeconds < 12)
+            //            {
+            //                switch (Math.Round(difftimeInSeconds.TotalSeconds).ToString())
+            //                {
+            //                    case "5":
+            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFEEEEEE");
+            //                        break;
+            //                    case "6":
+            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFD3D3D3");
+            //                        break;
+            //                    case "7":
+            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFCCCCCC");
+            //                        break;
+            //                    case "8":
+            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFC3C3C3");
+            //                        break;
+            //                    case "9":
+            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFBBBBBB");
+            //                        break;
+            //                    case "10":
+            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFA1A1A1");
+            //                        break;
+            //                    case "11":
+            //                        e.Row.Background = new SolidColorBrush(Colors.Gray);
+            //                        break;
+            //                }
+            //                Dispatcher.BeginInvoke(new System.Threading.ThreadStart(delegate () { RetainAgingOnStopRead(data.SerialNumber.ToString(), e.Row.Background); }));
+            //            }
+            //            else
+            //            {
+            //                e.Row.Background = (Brush)brush.ConvertFrom("#FF888888");
+            //                Dispatcher.BeginInvoke(new System.Threading.ThreadStart(delegate () { RetainAgingOnStopRead(data.SerialNumber.ToString(), e.Row.Background); }));
+            //            }
+            //        }
+            //        else
+            //        {
+            //            if (tagagingColourCache.ContainsKey(data.SerialNumber.ToString()))
+            //            {
+            //                e.Row.Background = tagagingColourCache[data.SerialNumber.ToString()];
+            //            }
+            //            else
+            //            {
+            //                e.Row.Background = Brushes.White;
+            //            }
+            //        }
+            //    }
+            //}
+            //catch { }
         }
     }
 }

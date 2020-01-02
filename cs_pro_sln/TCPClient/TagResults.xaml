@@ -6,7 +6,10 @@
              xmlns:local="clr-namespace:TCPClient"
              xmlns:TagResults="clr-namespace:TCPClient" DataContext="{Binding}">
     <Grid>
-        <DataGrid IsReadOnly="True" ItemsSource="{Binding}" FontFamily="Arial" FontSize="12" Background="White" Name="dgTagResults" AutoGenerateColumns="False">
+        <DataGrid IsReadOnly="True" ItemsSource="{Binding}" FontFamily="Arial" FontSize="12" Background="White" Name="dgTagResults" AutoGenerateColumns="False"  CanUserSortColumns="True"
+                  VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"  
+                  HorizontalScrollBarVisibility="Auto" IsTextSearchEnabled="True" CanUserResizeColumns="True"   CanUserReorderColumns="False" 
+                  CanUserResizeRows="False" LoadingRow="dgTagResults_LoadingRow">
             <DataGrid.Columns>
                 <DataGridTemplateColumn>
                     <DataGridTemplateColumn.HeaderTemplate>
@@ -26,9 +29,13 @@
                 <DataGridTextColumn x:Name="tidColumn"/>
                 <DataGridTextColumn x:Name="reservedColumn"/>
                 <DataGridTextColumn x:Name="userColumn"/>
+                <DataGridTextColumn x:Name="timeStampColumn" Binding="{Binding Mode=OneWay}"/>
                 <DataGridTextColumn x:Name="rssiColumn"/>
                 <DataGridTextColumn x:Name="readcountColumn"/>
-                <DataGridTextColumn x:Name="readtimeColumn"/>
+                <DataGridTextColumn x:Name="antennaColumn"/>
+                <DataGridTextColumn x:Name="protocolColumn"/>
+                <DataGridTextColumn x:Name="frequencyColumn"/>
+                <DataGridTextColumn x:Name="phaseColumn"/>
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

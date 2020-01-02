@@ -77,7 +77,8 @@
     <Compile Include="TagResults.xaml.cs">
       <DependentUpon>TagResults.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ToWriteBank.cs" />
+    <Compile Include="ToExecuteTagOp.cs" />
+    <Compile Include="ToLockBank.cs" />
     <Compile Include="WriteBank.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

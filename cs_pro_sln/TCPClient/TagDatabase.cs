@@ -97,7 +97,9 @@ namespace TCPClient
                     logUtils.Log(string.Format("Add {0}", key));
                     TagReadRecord value = new TagReadRecord(addData);
                     value.SerialNumber = (uint)EpcIndex.Count + 1;
-
+                    value.TimeStamp = DateTime.Now.ToLocalTime();
+                    value.ReadCount = 1;
+                    
                     _tagList.Add(value);
                     EpcIndex.Add(key, value);
                     UpdateTagCount(EpcIndex);
@@ -155,6 +157,44 @@ namespace TCPClient
                         return (int)(a.SerialNumber - b.SerialNumber);
                     });
                     break;
+                case "epcString"://"EPC":
+                    comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
+                    {
+                        return String.Compare(a.epcString, b.epcString);;
+                    });
+                    break;
+                case "tidString":// "Tid":
+                    comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
+                    {
+                        return String.Compare(a.tidString, b.tidString); ;
+                    });
+                    break;
+                case "reservedString"://"Reserved":
+                    comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
+                    {
+                        return String.Compare(a.reservedString, b.reservedString); ;
+                    });
+                    break;
+                case "userString"://"User":
+                    comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
+                    {
+                        return String.Compare(a.userString, b.userString); ;
+                    });
+                    break;
+                
+                case "TimeStamp":
+                    comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
+                    {
+                        return DateTime.Compare(a.TimeStamp, b.TimeStamp);
+                    });
+                    break;
+
+                case "RSSI":
+                    comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
+                    {
+                        return a.RSSI - b.RSSI;
+                    });
+                    break;
                 case "ReadCount":
                     comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
                     {
@@ -167,37 +207,24 @@ namespace TCPClient
                         return a.Antenna - b.Antenna;
                     });
                     break;
-                case "RSSI":
+                case "Protocol":
                     comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
                     {
-                        return a.RSSI - b.RSSI;
+                        return String.Compare(a.Protocol.ToString(), b.Protocol.ToString());
                     });
                     break;
-                case "EPC":
+                case "Frequency":
                     comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
                     {
-                        return String.Compare(a.epcString, b.epcString);;
+                        return a.Frequency - b.Frequency;
                     });
                     break;
-                case "User":
+                case "Phase":
                     comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
                     {
-                        return String.Compare(a.userString, b.userString); ;
+                        return a.Phase - b.Phase;
                     });
                     break;
-                case "Tid":
-                    comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
-                    {
-                        return String.Compare(a.tidString, b.tidString); ;
-                    });
-                    break;
-                case "Reserved":
-                    comparer = new Comparison<TagReadRecord>(delegate (TagReadRecord a, TagReadRecord b)
-                    {
-                        return String.Compare(a.reservedString, b.reservedString); ;
-                    });
-                    break;
-
             }
             return comparer;
         }
@@ -208,6 +235,8 @@ namespace TCPClient
         protected RxdTagData RawRead = null;
         protected UInt32 serialNo = 0;
         public bool dataChecked = false;
+        private DateTime Time;
+        private int readCount = 0;
 
         public TagReadRecord(RxdTagData newData)
         {
@@ -219,10 +248,13 @@ namespace TCPClient
 
         public void Update(RxdTagData mergeData)
         {
-            //TimeSpan timediff = mergeData.Time.ToUniversalTime() - this.TimeStamp.ToUniversalTime();
-            if (true)//0 <= timediff.TotalMilliseconds)
+            DateTime now = DateTime.Now.ToLocalTime();
+            TimeSpan timediff = now - this.TimeStamp.ToUniversalTime();
+            if (0 <= timediff.TotalMilliseconds)
             {
                 RawRead = mergeData;
+                this.TimeStamp = now;
+                this.readCount += 1;
             }
 
             OnPropertyChanged(null);
@@ -284,11 +316,6 @@ namespace TCPClient
             get { return RawRead.RSSI; }
         }
 
-        public int ReadCount
-        {
-            get { return 0; }
-        }
-
         public bool Checked
         {
             get { return dataChecked; }
@@ -297,6 +324,36 @@ namespace TCPClient
                 dataChecked = value;
             }
         }
+
+        public int ReadCount
+        {
+            get { return readCount; }
+            set
+            {
+                readCount = value;
+            }
+        }
+
+        public DateTime TimeStamp
+        {
+            get
+            {
+                //return DateTime.Now.ToLocalTime();
+                TimeSpan difftime = (DateTime.Now.ToUniversalTime() - Time.ToUniversalTime());
+                //double a1111 = difftime.TotalSeconds;
+                if (difftime.TotalHours > 24)
+                    return DateTime.Now.ToLocalTime();
+                else
+                    return Time.ToLocalTime();
+            }
+            set
+            {
+                Time = value;
+            }
+        }
+        public object Protocol { get; internal set; }
+        public int Frequency { get; internal set; }
+        public int Phase { get; internal set; }
 
         #region INotifyPropertyChanged Members
 

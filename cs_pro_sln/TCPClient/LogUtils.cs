@@ -112,5 +112,32 @@ namespace TCPClient
                 w1.Ptr,
                 ByteFormat.ToHex(w1.TagData, "", " ")));
         }
+
+        public void Log(string msg, LockTagParameter param)
+        {
+            Log(string.Format("****---------->Msg={0}\r\n LockBank={1}\r\n LockType={2}\r\n AccessPassword={3}\r\n Select:\r\n MemoryBank={4}\r\n Ptr={5}\r\n TagData={6}\r\n<---------****",
+                msg, 
+                param.LockBank,
+                param.LockType,
+                ByteFormat.ToHex(param.AccessPassword, "", " "),
+                param.SelectTagParam.MemoryBank,
+                param.SelectTagParam.Ptr,
+                ByteFormat.ToHex(param.SelectTagParam.TagData, "", " ")));
+        }
+
+        internal void Log(string msg, KillTagParameter param)
+        {
+            Log(string.Format("****---------->Msg={0}\r\n " +
+                "KillPassword={1}\r\n " +
+                "Select:\r\n " +
+                "MemoryBank={2}\r\n " +
+                "Ptr={3}\r\n " +
+                "TagData={4}\r\n<---------****",
+                msg,
+                ByteFormat.ToHex(param.KillPassword, "", " "),
+                param.SelectTagParam.MemoryBank,
+                param.SelectTagParam.Ptr,
+                ByteFormat.ToHex(param.SelectTagParam.TagData, "", " ")));
+        }
     }
 }

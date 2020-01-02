@@ -46,9 +46,16 @@
                 <ComboBox x:Name="baudrate_combobox" MinWidth="80" Margin="5" VerticalContentAlignment="Center" SelectionChanged="Baudrate_combobox_SelectionChanged" IsEnabled="False"/>
             </StackPanel>
             <Button x:Name="vboto_connect_button" Content="Connect" Width="80" Margin="5" Click="Vboto_connect_button_Click" />
-            <Button x:Name="vboto_clear_button" Content="Clear" Width="80" Margin="5" Click="Vboto_clear_button_Click" />
+            <Button x:Name="vboto_clear_button" Content="Clear" Width="80" Margin="5,0,5,5" Click="Vboto_clear_button_Click" Height="20" VerticalAlignment="Bottom" />
             <CheckBox x:Name="is_unique_by_membank_checkbox" Content="IsUniqueByTID" Margin="5" MinWidth="80"/>
-            <Label x:Name="tagcount_label"  Content=""/>
+
+            <ComboBox Visibility="Visible" Margin="3" VerticalContentAlignment="Center" ToolTip="Select to get counts in big num format" ToolTipService.ShowOnDisabled="True" SelectedIndex="0" HorizontalAlignment="Left" Name="cbxBigNum" SelectionChanged="cbxBigNum_SelectionChanged">
+                <ComboBoxItem Content="Select"/>
+                <ComboBoxItem Content="Remove Big Num" />
+                <ComboBoxItem Content="Unique Tag Count" />
+                <ComboBoxItem Content="Total Tag Count" />
+                <ComboBoxItem Content="Summary of Tag Result"/>
+            </ComboBox>
 
 
         </StackPanel>
@@ -131,8 +138,21 @@
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
-                    <Border Grid.Column="3" Grid.Row="0" Grid.ColumnSpan="2" Grid.RowSpan="4">
+                    <Border Grid.Column="3" Grid.Row="0" Grid.ColumnSpan="2" Grid.RowSpan="2">
                         <ListView x:Name="reader_info_listview" BorderBrush="Black" Margin="5"/>
+                    </Border>
+                    <Border Grid.Column="3" Grid.Row="2" Grid.ColumnSpan="2" Grid.RowSpan="2" Margin="3,1,1,1" BorderBrush="Black" BorderThickness="1">
+                        <Grid>
+                            <Label Content="Unique Tag Count" Name="lblUniqueTagsRead" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="16,5,0,0" />
+                            <Label HorizontalAlignment="Left" Name="totalUniqueTagsReadTextBox" VerticalAlignment="Top" Content="0" Height="25" FontSize="14" Margin="135,5,0,0" />
+                            <Label Margin="16,28,0,0" Content="Total Tag Count"  HorizontalAlignment="Left" Name="lbltotalTagsRead" VerticalAlignment="Top" Width="113" />
+                            <Label  HorizontalAlignment="Left" Name="txtTotalTagReads" Content="0" VerticalAlignment="Top" Height="25" FontSize="14" Margin="135,28,0,0" />
+                            <Label Margin="90,54,0,0" Content="in"  HorizontalAlignment="Left" Name="lblin" VerticalAlignment="Top" />
+                            <Label Name="totalTimeElapsedTextBox" Content="0" HorizontalAlignment="Left" VerticalAlignment="Top" Height="25" FontSize="14" Margin="135,52,0,0"/>
+                            <Label Margin="200,52,0,0" Content="Sec" HorizontalAlignment="Left" Name="lblSeconds" VerticalAlignment="Top" />
+                            <Label Margin="16,74,0,0" Content="Read Rate/Sec"  HorizontalAlignment="Left" Name="lblReadRatePerSec" VerticalAlignment="Top" />
+                            <Label  HorizontalAlignment="Left" Name="txtbxReadRatePerSec" Content="0" VerticalAlignment="Top" Height="25" FontSize="14" Margin="135,74,0,0"  />
+                        </Grid>
                     </Border>
                 </Grid>
             </TabItem>
@@ -162,13 +182,11 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
-                                <StackPanel Grid.Column="0" Grid.Row="0" Orientation="Vertical">
-                                    <RadioButton GroupName="scan_type_radio" x:Name="is_TagInventory_radiobutton" Content="IsTagInventory" VerticalContentAlignment="Center" Margin="5" Checked="Is_TagInventory_radiobutton_Checked" />
-                                    <Button  x:Name="vboto_scan_epc_button" Content="ScanEPC" Margin="5" MinHeight="35" BorderBrush="Black" Click="Vboto_scan_epc_button_Click"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1" Grid.Row="0" Orientation="Vertical">
-                                    <RadioButton GroupName="scan_type_radio" x:Name="is_TagRead_radiobutton" Content="IsTagRead" VerticalContentAlignment="Center" Margin="5" Checked="Is_TagRead_radiobutton_Checked" />
+                                <StackPanel Grid.Column="0" Grid.Row="0" Grid.ColumnSpan="2" Orientation="Vertical">
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton GroupName="scan_type_radio" x:Name="is_TagInventory_radiobutton" Content="IsTagInventory" VerticalContentAlignment="Center" Margin="5" Checked="Is_TagInventory_radiobutton_Checked" />
+                                        <RadioButton GroupName="scan_type_radio" x:Name="is_TagRead_radiobutton" Content="IsTagRead" VerticalContentAlignment="Center" Margin="5" Checked="Is_TagRead_radiobutton_Checked" />
+                                    </StackPanel>
                                     <Button x:Name="vboto_scan_button" Content="Scan" Margin="5" BorderBrush="Black" MinHeight="35" Click="Vboto_scan_button_Click"/>
                                 </StackPanel>
 
@@ -263,7 +281,7 @@
                                         <ComboBox.ItemTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Label Content="start" VerticalContentAlignment="Center"/>
+                                                    <Label Content="start(Words)" VerticalContentAlignment="Center"/>
                                                     <TextBox MinWidth="60" Margin="5" Text="{Binding StartAddr}"/>
                                                     <Label Content="Data:" Margin="5"/>
                                                     <TextBox Text="{Binding DataStr}" MinWidth="240" VerticalContentAlignment="Center" Margin="5"/>
@@ -271,7 +289,7 @@
                                             </DataTemplate>
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
-                                    
+
                                 </StackPanel>
 
                                 <StackPanel Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="5"  Orientation="Horizontal">
@@ -280,7 +298,7 @@
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
                                                     <CheckBox Content="{Binding MemBank}" IsChecked="{Binding IsChecked}" MinWidth="80" Margin="5" VerticalContentAlignment="Center"/>
-                                                    <Label Content="start" VerticalContentAlignment="Center" />
+                                                    <Label Content="start(Words)" VerticalContentAlignment="Center" />
                                                     <TextBox Text="{Binding StartAddr}" MinWidth="60" Margin="5" VerticalContentAlignment="Center"/>
                                                     <Label Content="Data:" Margin="5" VerticalContentAlignment="Center"/>
                                                     <TextBox Text="{Binding DataHexStr}" MinWidth="240" VerticalContentAlignment="Center" Margin="5"/>
@@ -291,9 +309,128 @@
                                 </StackPanel>
                             </Grid>
                         </TabItem>
+
+                        <TabItem x:Name="TagOP_TagLock_tabitem" Header="TagLock" Loaded="TagOP_TagLock_tabitem_Loaded">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="131*"/>
+                                    <ColumnDefinition Width="40*"/>
+                                    <ColumnDefinition Width="91*"/>
+                                    <ColumnDefinition Width="131*"/>
+                                    <ColumnDefinition Width="131*"/>
+                                    <ColumnDefinition Width="132*"/>
+                                    <ColumnDefinition Width="131*"/>
+                                    <ColumnDefinition Width="132*"/>
+                                    <ColumnDefinition Width="131*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Button x:Name="TagLock_button" Grid.Column="0" Content="Lock" Margin="5,5,5,0" Click="TagLock_button_Click" Height="26" VerticalAlignment="Top"/>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Grid.ColumnSpan="2">
+                                    <Label Content="PW:" Margin="5"/>
+                                    <TextBox x:Name="TagLock_password_textbox" Text="00000000" MinWidth="80" VerticalContentAlignment="Center" Margin="5"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="3" Grid.ColumnSpan="5"  Orientation="Horizontal">
+                                    <ComboBox x:Name="TagLock_select_membank_combobox" MinWidth="80" Margin="5"/>
+                                    <Button x:Name="TagLock_update_select_button" Content="Update" Margin="5" Click="TagLock_update_select_button_Click"/>
+                                    <ComboBox x:Name="TagLock_selected_combobox" MinWidth="80">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Label Content="start(Words)" VerticalContentAlignment="Center"/>
+                                                    <TextBox MinWidth="60" Margin="5" Text="{Binding StartAddr}"/>
+                                                    <Label Content="Data:" Margin="5"/>
+                                                    <TextBox Text="{Binding DataStr}" MinWidth="240" VerticalContentAlignment="Center" Margin="5"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="4" Orientation="Horizontal">
+                                    <ComboBox x:Name="TagLock_lockbank_combobox" MinWidth="120" Margin="5" VerticalContentAlignment="Center">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <CheckBox Content="{Binding TheLockBank}" IsChecked="{Binding IsChecked}" Checked="CheckBox_Checked" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="4" Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal">
+                                    <Label Content="Lock Type:" Margin="5"/>
+                                    <ComboBox x:Name="TagLock_locktype_combobox" MinWidth="80" Margin="5"/>
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
+
+                        <TabItem x:Name="TagOP_TagKilltabitem" Header="TagKill" Loaded="TagOP_TagKilltabitem_Loaded">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="80"/>
+                                    <ColumnDefinition Width="160"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Button x:Name="TagKill_button" Grid.Column="0" Content="Kill" Margin="5,5,5,0" Click="TagKill_button_Click" Height="26" VerticalAlignment="Top"/>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Grid.ColumnSpan="2">
+                                    <Label Content="Kill PW:" Margin="5"/>
+                                    <TextBox x:Name="TagKill_killpassword_textbox" Text="00000000" MinWidth="80" VerticalContentAlignment="Center" Margin="5"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="3" Grid.ColumnSpan="5"  Orientation="Horizontal">
+                                    <ComboBox x:Name="TagKill_select_membank_combobox" MinWidth="80" Margin="5"/>
+                                    <Button x:Name="TagKill_update_select_button" Content="Update" Margin="5" Click="TagKill_update_select_button_Click"/>
+                                    <ComboBox x:Name="TagKill_selected_combobox" MinWidth="80">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Label Content="start(Words)" VerticalContentAlignment="Center"/>
+                                                    <TextBox MinWidth="60" Margin="5" Text="{Binding StartAddr}"/>
+                                                    <Label Content="Data:" Margin="5"/>
+                                                    <TextBox Text="{Binding DataStr}" MinWidth="240" VerticalContentAlignment="Center" Margin="5"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                </StackPanel>
+                            </Grid>
+                        </TabItem>
                     </TabControl>
 
-                    <TagResults:TagResults x:Name="TagResults" Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" Margin="5" DataContext="{Binding}"/>
+
+                    <Grid Grid.Column="0" Grid.Row="1" Grid.RowSpan="2" >
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding ElementName=bigNumTotalTagCounts, Path=Visibility}" Name="gridTotalTagCountsBigNum"  Margin="0,55,0,0" Panel.ZIndex="1000" Background="Transparent" Opacity=".5">
+                            <Label Visibility="{Binding ElementName=bigNumTotalTagCounts, Path=Visibility}" Panel.ZIndex="1000" Margin="0,108,0,0" FontSize="32" Background="Transparent" Name="lblTotalTagCounts" Content="Total Tag Count" Foreground="DarkViolet" HorizontalContentAlignment="Center" ></Label>
+                            <Label Visibility="Collapsed" HorizontalContentAlignment="Center" Panel.ZIndex="1000" Name="bigNumTotalTagCounts" Background="Transparent" Foreground="DarkViolet" Opacity=".5" FontSize="220" Content="{Binding ElementName=txtTotalTagReads, Path=Content}" Height="333" Margin="0,111,0,0"></Label>
+                        </Grid>
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding ElementName=bigNumUniqueTagCounts, Path=Visibility}" Name="gridUniqueTagCountsBigNum" Margin="0,55,0,0"  Panel.ZIndex="1000" Background="Transparent" Opacity=".5">
+                            <Label Visibility="{Binding ElementName=bigNumUniqueTagCounts, Path=Visibility}" Panel.ZIndex="1000" Margin="0,105,0,0" FontSize="32" Background="Transparent" Name="lblUniqueTagCounts" Content="Unique Tag Count" Foreground="DarkViolet" HorizontalContentAlignment="Center" ></Label>
+                            <Label Visibility="Collapsed" HorizontalContentAlignment="Center" Panel.ZIndex="1000" Name="bigNumUniqueTagCounts" Background="Transparent" Foreground="DarkViolet" Opacity=".5" FontSize="220" Content="{Binding ElementName=totalUniqueTagsReadTextBox, Path=Content}" Height="333" Margin="0,111,0,0"></Label>
+                        </Grid>
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" Name="gridCountsBigNum"  Panel.ZIndex="1000" Background="Transparent" Opacity=".5" Margin="0,51,0,0">
+                            <Label Panel.ZIndex="1000" Margin="40,0,0,20" FontSize="32" Background="Transparent" Name="gridlblUniqueTagCounts" Content="Unique Tag Count" Foreground="DarkViolet" HorizontalContentAlignment="Center" ></Label>
+                            <Label Foreground="DarkViolet" Panel.ZIndex="1000" Margin="0,10" FontSize="120" Background="Transparent" Opacity=".8" Name="gridlblUniqueTagCountsValue" Content="{Binding ElementName=totalUniqueTagsReadTextBox, Path=Content}" HorizontalContentAlignment="Center"></Label>
+                            <Label Foreground="DarkViolet" Margin="40,150,-1,11" Panel.ZIndex="1000" FontSize="32" Background="Transparent" Name="gridlblTotalTagCounts" Content="Total Tag Count" HorizontalContentAlignment="Center"></Label>
+                            <Label Foreground="DarkViolet" Margin="0,156,-2,10" Panel.ZIndex="1000" FontSize="120" Background="Transparent" Opacity=".8" Name="gridlblTotalTagCountsValue" Content="{Binding ElementName=txtTotalTagReads, Path=Content}" HorizontalContentAlignment="Center"></Label>
+                            <Label Foreground="DarkViolet" Margin="40,284,-1,11" Panel.ZIndex="1000" FontSize="32" Background="Transparent" Name="gridlblReadRatePerSecCount" Content="Read Rate/Sec" HorizontalContentAlignment="Center"></Label>
+                            <Label Foreground="DarkViolet" Margin="0,294,-2,10" Panel.ZIndex="1000" FontSize="120" Background="Transparent" Opacity=".8" Name="gridlblReadRatePerSecCountValue" Content="{Binding ElementName=txtbxReadRatePerSec, Path=Content}" HorizontalContentAlignment="Center"></Label>
+                        </Grid>
+                        <TagResults:TagResults x:Name="TagResults"  Margin="5" DataContext="{Binding}"/>
+                    </Grid>
                 </Grid>
             </TabItem>
             <TabItem x:Name="msg_tabitem" Header="Msg" Loaded="Msg_tabitem_Loaded">

@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace TCPClient
 {
@@ -28,6 +29,8 @@ namespace TCPClient
         /// </summary>
         delegate void del();
         private delegate void EmptyDelegate();
+
+        private DateTime startAsyncReadTime;
 
         LogUtils logUtils = new LogUtils();
         TagDatabase tagdb = new TagDatabase();
@@ -433,7 +436,13 @@ namespace TCPClient
                 ));
                 Dispatcher.BeginInvoke(new ThreadStart(delegate ()
                 {
-                    tagcount_label.Content = string.Format("UniqueTags={0}, TotalReadCounts={1}", tagdb.UniqueTagCount, tagdb.TotalTagCount);
+                    startAsyncReadTime = DateTime.Now;
+                    txtTotalTagReads.Content = "0";
+                    totalUniqueTagsReadTextBox.Content = "0";
+                    totalTimeElapsedTextBox.Content = "0";
+                    txtTotalTagReads.Content = "0";
+                    totalUniqueTagsReadTextBox.Content = "0";
+                    txtbxReadRatePerSec.Content = "0";
                 }));
 
             });
@@ -646,33 +655,6 @@ namespace TCPClient
         
 
         // TagInventory 
-        private void Vboto_scan_epc_button_Click(object sender, RoutedEventArgs e)
-        {
-            if (vboto_scan_epc_button.Content.Equals("ScanEPC"))
-            {
-                vboto_scan_epc_button.Content = "Scaning";
-                reader.OnInventoryReceived += OnVRPInventoryReceived;
-                tagdb.UniqueByteTID = is_unique_by_membank_checkbox.IsChecked.Value;
-                ScanEPC((bool)IsTagInventory_use_param_checkbox.IsChecked);
-            }
-            else if (vboto_scan_epc_button.Content.Equals("Scaning"))
-            {
-                vboto_scan_epc_button.Content = "ScanEPC";
-                reader.OnInventoryReceived -= OnVRPInventoryReceived;
-                bool ret = false;
-                ret = reader.Send(new MsgPowerOff());
-                logUtils.Log(string.Format("msgPowerOff: {0}", ret));
-                if (ret)
-                {
-                    
-                }
-                else
-                {
-
-                }
-            }
-        }
-
         private void ScanEPC(bool IsSetParam)
         {
             if (IsSetParam == true)
@@ -760,7 +742,7 @@ namespace TCPClient
             logUtils.Log(string.Format("TagInventory: {0}", ret));
             if (ret == true)
             {
-
+                logUtils.Log("TagInventory success");
             }
             else
             {
@@ -776,7 +758,7 @@ namespace TCPClient
             logUtils.Log(string.Format("TagInventory with param: {0}", ret));
             if (ret == true)
             {
-
+                logUtils.Log("TagInventory with param success");
             }
             else
             {
@@ -786,22 +768,22 @@ namespace TCPClient
 
         private void TagRead()
         {
-        //public bool IsLoop = false;
-        //public byte[] AccessPassword = new byte[4];
-        //public bool IsReturnEPC = false;
-        //public bool IsReturnTID = false;
-        //public UInt32 UserPtr;
-        //public byte UserLen;
-        //public bool IsReturnReserved = false;
-        //public ushort ReadCount = 1;// 注意：此处默认读取 1 次
-        //public ushort ReadTime = 100;
-        bool ret = false;
+            //public bool IsLoop = false;
+            //public byte[] AccessPassword = new byte[4];
+            //public bool IsReturnEPC = false;
+            //public bool IsReturnTID = false;
+            //public UInt32 UserPtr;
+            //public byte UserLen;
+            //public bool IsReturnReserved = false;
+            //public ushort ReadCount = 1;// 注意：此处默认读取 1 次
+            //public ushort ReadTime = 100;
+            bool ret = false;
             MsgTagRead msgTagRead = new MsgTagRead();
             ret = reader.Send(msgTagRead);
             logUtils.Log(string.Format("TagRead: {0}", ret));
             if (ret == true)
             {
-
+                logUtils.Log("TagRead success");
             }
             else
             {
@@ -821,7 +803,7 @@ namespace TCPClient
             }
             else
             {
-                logUtils.Log("agRead with param", msgTagRead.ErrorInfo);
+                logUtils.Log("TagRead with param", msgTagRead.ErrorInfo);
             }
         }
 
@@ -830,26 +812,37 @@ namespace TCPClient
             if (vboto_scan_button.Content.Equals("Scan"))
             {
                 vboto_scan_button.Content = "Scaning";
+                startAsyncReadTime = DateTime.Now;
                 reader.OnInventoryReceived += OnVRPInventoryReceived;
                 tagdb.UniqueByteTID = is_unique_by_membank_checkbox.IsChecked.Value;
-                Scan((bool)IsTagRead_use_param_checkbox.IsChecked);
+
+                if (is_TagInventory_radiobutton.IsChecked == true)
+                {
+                    ScanEPC((bool)IsTagInventory_use_param_checkbox.IsChecked);
+                }
+                else if (is_TagRead_radiobutton.IsChecked == true)
+                {
+                    Scan((bool)IsTagRead_use_param_checkbox.IsChecked);
+                }
             }
             else if (vboto_scan_button.Content.Equals("Scaning"))
             {
                 vboto_scan_button.Content = "Scan";
                 reader.OnInventoryReceived -= OnVRPInventoryReceived;
                 bool ret = false;
-                ret = reader.Send(new MsgPowerOff());
+                MsgPowerOff msgPowerOff = new MsgPowerOff();
+                ret = reader.Send(msgPowerOff);
                 logUtils.Log(string.Format("msgPowerOff: {0}", ret));
                 if (ret)
                 {
-
+                    logUtils.Log("MsgPowerOff success");
                 }
                 else
                 {
-
+                    logUtils.Log("MsgPowerOff", msgPowerOff.ErrorInfo);
                 }
             }
+
         }
 
         private void Baudrate_combobox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1240,8 +1233,25 @@ namespace TCPClient
 
             Dispatcher.BeginInvoke(new ThreadStart(delegate ()
             {
-                tagcount_label.Content = string.Format("UniqueTags={0}, TotalReadCounts={1}", tagdb.UniqueTagCount, tagdb.TotalTagCount);
+                totalUniqueTagsReadTextBox.Content = tagdb.UniqueTagCount;
+                txtTotalTagReads.Content = tagdb.TotalTagCount;
             }));
+        }
+
+        private void GetUTC()
+        {
+            bool ret = false;
+            MsgUtcConfig msgUtcConfig = new MsgUtcConfig();
+            ret = reader.Send(msgUtcConfig);
+            if (ret == true)
+            {
+                logUtils.Log(string.Format("GetUTC {0}", msgUtcConfig.ReceivedMessage.UTC));
+            }
+            else
+            {
+                logUtils.Log("GetUTC", msgUtcConfig.ErrorInfo);
+            }
+
         }
 
 
@@ -1946,8 +1956,6 @@ namespace TCPClient
         {
             IsTagInventory_stackpanel.Visibility = Visibility.Visible;
             IsTagRead_stackpanel.Visibility = Visibility.Collapsed;
-            vboto_scan_epc_button.IsEnabled = true;
-            vboto_scan_button.IsEnabled = false;
 
             MemoryBank_combobox.ItemsSource = null;
             MemoryBank_combobox.ItemsSource = GetMemoryBank(); ;
@@ -1967,8 +1975,6 @@ namespace TCPClient
         {
             IsTagInventory_stackpanel.Visibility = Visibility.Collapsed;
             IsTagRead_stackpanel.Visibility = Visibility.Visible;
-            vboto_scan_epc_button.IsEnabled = false;
-            vboto_scan_button.IsEnabled = true;
         }
 
         private void Is_MemBank_use_checkbox_Checked(object sender, RoutedEventArgs e)
@@ -1997,7 +2003,7 @@ namespace TCPClient
             bool isloop = TagWrite_IsLoop_checkbox.IsChecked.Value;
             byte[] accessPassword = ByteFormat.FromHex(TagWrite_password_textbox.Text);
             MemoryBank bank = (MemoryBank)TagWrite_select_membank_combobox.SelectedValue;
-            foreach (ToWriteBank twb in TagWrite_selected_combobox.Items)
+            foreach (ToExecuteTagOp twb in TagWrite_selected_combobox.Items)
             {
                 TagWrite(isloop, accessPassword, bank, twb.StartAddr, twb.Data, UpdateWriteBank());
             }
@@ -2044,6 +2050,14 @@ namespace TCPClient
 
             TagParameter[] writedata = list.ToArray();
             param.WriteDataAry = writedata;
+
+            string str = "Writedata:\r\n";
+            foreach (TagParameter tp in param.WriteDataAry)
+            {
+                str += string.Format("---> {0},{1}, data[{2}]\r\n", tp.MemoryBank, tp.Ptr, ByteFormat.ToHex(tp.TagData, "", " "));
+            }
+            logUtils.Log(string.Format("{0}\r\n", str));
+
             try
             {
                 TagWrite(param);
@@ -2063,7 +2077,12 @@ namespace TCPClient
             logUtils.Log(string.Format("TagWrite: {0}", ret));
             if (ret == true)
             {
-                logUtils.Log(string.Format("TagWrite  success"));
+                string str = "";
+                foreach(TagParameter tp in param.WriteDataAry)
+                {
+                    str += string.Format("---> {0},{1}, data[{2}]\r\n", tp.MemoryBank, tp.Ptr, ByteFormat.ToHex(tp.TagData, "", " "));
+                }
+                logUtils.Log(string.Format("TagWrite success\r\n{0}", str));
                 return true;
             }
             else
@@ -2094,8 +2113,6 @@ namespace TCPClient
             TagWrite_write_combobox.ItemsSource = GetWriteBank();
             if (TagWrite_write_combobox.Items.Count > 0)
                 TagWrite_write_combobox.SelectedIndex = 0;
-
-
         }
 
         private IEnumerable GetMemoryBankForSelect()
@@ -2122,7 +2139,7 @@ namespace TCPClient
                 if (bank == MemoryBank.EPCMemory)
                 {
                     writeBank.IsChecked = true;
-                    writeBank.StartAddr = 32;
+                    writeBank.StartAddr = 2;
 
                 }
                 else
@@ -2139,7 +2156,7 @@ namespace TCPClient
 
         private void TagWrite_select_membank_combobox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            
+            //TagWrite_update_select_button_Click(sender, e);
         }
 
         private void TagWrite_update_select_button_Click(object sender, RoutedEventArgs e)
@@ -2147,25 +2164,25 @@ namespace TCPClient
             List<TagReadRecord> list = GetSelectTagReadList();
             
             TagWrite_selected_combobox.ItemsSource = null;
-            TagWrite_selected_combobox.ItemsSource = GetSelectForWriteList(list, (MemoryBank)TagWrite_select_membank_combobox.SelectedValue);
+            TagWrite_selected_combobox.ItemsSource = GetSelectForExecuteTagOpList(list, (MemoryBank)TagWrite_select_membank_combobox.SelectedValue);
             if (TagWrite_selected_combobox.Items.Count > 0)
             {
                 TagWrite_selected_combobox.SelectedIndex = 0;
             }
         }
 
-        private List<ToWriteBank> GetSelectForWriteList(List<TagReadRecord> list, MemoryBank bank)
+        private List<ToExecuteTagOp> GetSelectForExecuteTagOpList(List<TagReadRecord> list, MemoryBank bank)
         {
-            logUtils.Log(string.Format("GetSelectForWriteList {0}", bank));
-            List<ToWriteBank> towrites = new List<ToWriteBank>();
+            logUtils.Log(string.Format("GetSelectForExecuteTagOpList {0}", bank));
+            List<ToExecuteTagOp> towrites = new List<ToExecuteTagOp>();
             uint start = 0;
 
             if (bank == MemoryBank.EPCMemory)
             {
-                start = 32;
+                start = 2;
                 foreach (TagReadRecord trd in list)
                 {
-                    ToWriteBank twb = new ToWriteBank();
+                    ToExecuteTagOp twb = new ToExecuteTagOp();
                     twb.StartAddr = start;
                     twb.Data = trd.EPC;
                     towrites.Add(twb);
@@ -2176,7 +2193,7 @@ namespace TCPClient
                 start = 0;
                 foreach (TagReadRecord trd in list)
                 {
-                    ToWriteBank twb = new ToWriteBank();
+                    ToExecuteTagOp twb = new ToExecuteTagOp();
                     twb.StartAddr = start;
                     twb.Data = trd.TID;
                     towrites.Add(twb);
@@ -2187,7 +2204,7 @@ namespace TCPClient
                 start = 0;
                 foreach (TagReadRecord trd in list)
                 {
-                    ToWriteBank twb = new ToWriteBank();
+                    ToExecuteTagOp twb = new ToExecuteTagOp();
                     twb.StartAddr = start;
                     twb.Data = trd.User;
                     towrites.Add(twb);
@@ -2207,6 +2224,238 @@ namespace TCPClient
                 }
             }
             return list;
+        }
+
+        // TagLock
+        private void TagLock_button_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (ToExecuteTagOp toTagOpBank in TagLock_selected_combobox.ItemsSource)
+            {
+                foreach(ToLockBank toLockBank in TagLock_lockbank_combobox.ItemsSource)
+                {
+                    if(toLockBank.IsChecked == true)
+                    {
+                        logUtils.Log(string.Format("\r\n ******** To ExecuteTagOp the bank={0}", toLockBank.TheLockBank));
+                        LockTagParameter param = new LockTagParameter();
+                        param.LockBank = toLockBank.TheLockBank;
+                        param.AccessPassword = ByteFormat.FromHex(TagLock_password_textbox.Text);
+                        param.LockType = (LockType)TagLock_locktype_combobox.SelectedValue;
+                        TagParameter tag = new TagParameter();
+                        tag.MemoryBank = (MemoryBank)TagLock_select_membank_combobox.SelectedValue;
+                        tag.Ptr = toTagOpBank.StartAddr;
+                        tag.TagData = toTagOpBank.Data;
+                        param.SelectTagParam = tag;
+
+                        TagLock(param);
+                    }
+                }
+            }
+        }
+
+        private bool TagLock(LockTagParameter param)
+        {
+            logUtils.Log("TagLock", param);
+            bool ret = false;
+            MsgTagLock msgTagLock = new MsgTagLock(param);
+            ret = reader.Send(msgTagLock);
+            if(ret == true)
+            {
+                logUtils.Log(string.Format("TagLock ExecuteTagOp {0} success ", param.LockType));
+                return true;
+            }
+            else
+            {
+                ErrInfo errInfo = msgTagLock.ErrorInfo;
+                logUtils.Log(string.Format("TagLock Error={0}, {1}", errInfo.ErrCode, errInfo.ErrMsg));
+                return false;
+            }
+        }
+
+        private void TagOP_TagLock_tabitem_Loaded(object sender, RoutedEventArgs e)
+        {
+            // 选中标签的作为筛选的bank区
+            TagLock_select_membank_combobox.ItemsSource = null;
+            TagLock_select_membank_combobox.ItemsSource = GetMemoryBankForSelect();
+            if (TagLock_select_membank_combobox.Items.Count > 0)
+            {
+                TagLock_select_membank_combobox.SelectedIndex = 0;
+            }
+
+            // 选中要去锁定的标签
+            TagLock_selected_combobox.ItemsSource = null;
+            TagLock_selected_combobox.ItemsSource = GetSelectTagReadList();
+            if (TagLock_selected_combobox.Items.Count > 0)
+            {
+                TagLock_selected_combobox.SelectedIndex = 0;
+            }
+
+            // 要去锁定的区域
+            TagLock_lockbank_combobox.ItemsSource = null;
+            TagLock_lockbank_combobox.ItemsSource = GetLockBank();
+            if (TagLock_lockbank_combobox.Items.Count > 0)
+            {
+                TagLock_lockbank_combobox.SelectedIndex = 0;
+            }
+
+            // 要去锁定的类型
+            TagLock_locktype_combobox.ItemsSource = null;
+            TagLock_locktype_combobox.ItemsSource = GetLockType();
+            if (TagLock_locktype_combobox.Items.Count > 0)
+            {
+                TagLock_locktype_combobox.SelectedIndex = 0;
+            }
+        }
+
+        private List<ToLockBank> GetLockBank()
+        {
+            List<ToLockBank> list = new List<ToLockBank>();
+            foreach (LockBank bank in Enum.GetValues(typeof(LockBank)))
+            {
+                ToLockBank toLockBank = new ToLockBank();
+                toLockBank.TheLockBank = bank;
+                toLockBank.IsChecked = false;
+                list.Add(toLockBank);
+            }
+            return list;
+        }
+
+        private List<LockType> GetLockType()
+        {
+            List<LockType> list = new List<LockType>();
+            foreach (LockType bank in Enum.GetValues(typeof(LockType)))
+            {
+                list.Add(bank);
+            }
+            return list;
+        }
+
+        private void TagLock_update_select_button_Click(object sender, RoutedEventArgs e)
+        {
+            List<TagReadRecord> list = GetSelectTagReadList();
+
+            TagLock_selected_combobox.ItemsSource = null;
+            TagLock_selected_combobox.ItemsSource = GetSelectForExecuteTagOpList(list, (MemoryBank)TagLock_select_membank_combobox.SelectedValue);
+            if (TagLock_selected_combobox.Items.Count > 0)
+            {
+                TagLock_selected_combobox.SelectedIndex = 0;
+            }
+        }
+
+        private void TagLock_select_membank_combobox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            //TagLock_update_select_button_Click(sender, e);
+        }
+
+        private void CheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+
+        }
+
+        // TagKill
+        private void TagKill_button_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (ToExecuteTagOp toTagOpBank in TagKill_selected_combobox.ItemsSource)
+            {
+                KillTagParameter param = new KillTagParameter();
+                param.KillPassword = ByteFormat.FromHex(TagKill_killpassword_textbox.Text);
+                TagParameter tag = new TagParameter();
+                tag.MemoryBank = (MemoryBank)TagKill_select_membank_combobox.SelectedValue;
+                tag.Ptr = toTagOpBank.StartAddr;
+                tag.TagData = toTagOpBank.Data;
+                param.SelectTagParam = tag;
+
+                TagKill(param);
+            }
+        }
+
+        private bool TagKill(KillTagParameter param)
+        {
+            logUtils.Log("TagKill", param);
+            bool ret = false;
+            MsgTagKill msgTagKill = new MsgTagKill(param);
+            ret = reader.Send(msgTagKill);
+            if (ret == true)
+            {
+                logUtils.Log(string.Format("TagKill {0}{1} success ", param.SelectTagParam.MemoryBank, param.SelectTagParam.TagData));
+                return true;
+            }
+            else
+            {
+                ErrInfo errInfo = msgTagKill.ErrorInfo;
+                logUtils.Log(string.Format("TagKill Error={0}, {1}", errInfo.ErrCode, errInfo.ErrMsg));
+                return false;
+            }
+        }
+
+        private void TagKill_update_select_button_Click(object sender, RoutedEventArgs e)
+        {
+            List<TagReadRecord> list = GetSelectTagReadList();
+
+            TagKill_selected_combobox.ItemsSource = null;
+            TagKill_selected_combobox.ItemsSource = GetSelectForExecuteTagOpList(list, (MemoryBank)TagKill_select_membank_combobox.SelectedValue);
+            if (TagKill_selected_combobox.Items.Count > 0)
+            {
+                TagKill_selected_combobox.SelectedIndex = 0;
+            }
+        }
+
+        private void TagOP_TagKilltabitem_Loaded(object sender, RoutedEventArgs e)
+        {
+            // 选中标签的作为筛选的bank区
+            TagKill_select_membank_combobox.ItemsSource = null;
+            TagKill_select_membank_combobox.ItemsSource = GetMemoryBankForSelect();
+            if (TagKill_select_membank_combobox.Items.Count > 0)
+            {
+                TagKill_select_membank_combobox.SelectedIndex = 0;
+            }
+
+            // 选中要去杀死的标签
+            TagKill_selected_combobox.ItemsSource = null;
+            TagKill_selected_combobox.ItemsSource = GetSelectTagReadList();
+            if (TagKill_selected_combobox.Items.Count > 0)
+            {
+                TagKill_selected_combobox.SelectedIndex = 0;
+            }
+        }
+
+        private void cbxBigNum_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (null != cbxBigNum)
+            {
+                try
+                {
+                    string text = ((ComboBoxItem)cbxBigNum.SelectedItem).Content.ToString();
+                    switch (text)
+                    {
+                        case "Remove Big Num":
+                            bigNumUniqueTagCounts.Visibility = System.Windows.Visibility.Collapsed;
+                            bigNumTotalTagCounts.Visibility = System.Windows.Visibility.Collapsed;
+                            gridCountsBigNum.Visibility = System.Windows.Visibility.Collapsed;
+                            break;
+                        case "Unique Tag Count":
+                            bigNumUniqueTagCounts.Visibility = System.Windows.Visibility.Visible;
+                            bigNumTotalTagCounts.Visibility = System.Windows.Visibility.Collapsed;
+                            gridCountsBigNum.Visibility = System.Windows.Visibility.Collapsed;
+                            break;
+                        case "Total Tag Count":
+                            bigNumUniqueTagCounts.Visibility = System.Windows.Visibility.Collapsed;
+                            bigNumTotalTagCounts.Visibility = System.Windows.Visibility.Visible;
+                            gridCountsBigNum.Visibility = System.Windows.Visibility.Collapsed;
+                            break;
+                        case "Summary of Tag Result":
+                            bigNumUniqueTagCounts.Visibility = System.Windows.Visibility.Collapsed;
+                            bigNumTotalTagCounts.Visibility = System.Windows.Visibility.Collapsed;
+                            gridCountsBigNum.Visibility = System.Windows.Visibility.Visible;
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Universal Reader Assistant Message",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    cbxBigNum.SelectedIndex = 0;
+                }
+            }
         }
     }
 }
