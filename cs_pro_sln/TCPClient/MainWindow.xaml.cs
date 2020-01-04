@@ -31,6 +31,9 @@ namespace TCPClient
         private delegate void EmptyDelegate();
 
         private DateTime startAsyncReadTime;
+        public double continuousreadElapsedTime = 0.0;
+        DispatcherTimer readRatePerSec = null;
+        DispatcherTimer dispatchtimer = null;
 
         LogUtils logUtils = new LogUtils();
         TagDatabase tagdb = new TagDatabase();
@@ -46,9 +49,54 @@ namespace TCPClient
             connect_type_combobox.SelectedIndex = 0;
 
             InitUI();
+
+            readRatePerSec = new DispatcherTimer();
+            readRatePerSec.Tick += new EventHandler(readRatePerSec_Tick);
+            readRatePerSec.Interval = TimeSpan.FromMilliseconds(300);
+            //readRatePerSec.Start();
+
+            dispatchtimer = new DispatcherTimer();
+            dispatchtimer.Tick += new EventHandler(dispatchtimer_Tick);
+            dispatchtimer.Interval = TimeSpan.FromMilliseconds(300);
+            //dispatchtimer.Start();
+
             //InitCmdList();
         }
-        
+
+        private void dispatchtimer_Tick(object sender, EventArgs e)
+        {
+            try
+            {
+                TagResults.tagagingColourCache.Clear();
+                tagdb.Repaint();
+            }
+            catch { }
+        }
+
+        private void readRatePerSec_Tick(object sender, EventArgs e)
+        {
+            if (lbltotalTagsReadValue.Content.ToString() != "")
+                UpdateReadRate(CalculateElapsedTime());
+        }
+
+        private double CalculateElapsedTime()
+        {
+            TimeSpan elapsed = (DateTime.Now - startAsyncReadTime);
+            // elapsed time + previous cached async read time
+            double totalseconds = continuousreadElapsedTime + elapsed.TotalSeconds;
+            lbltotalReadTimeValue.Content = Math.Round(totalseconds, 2).ToString();
+            return totalseconds;
+        }
+
+        private void UpdateReadRate(double totalElapsedSeconds)
+        {
+            Dispatcher.BeginInvoke(new ThreadStart(delegate ()
+            {
+                long temp = Convert.ToInt64(lbltotalTagsReadValue.Content.ToString());
+                lblReadRatePerSecValue.Content = (Math.Round((temp / totalElapsedSeconds), 2)).ToString();
+            }));
+        }
+
         private IEnumerable InitConnectType()
         {
             List<string> list = new List<string>();
@@ -368,6 +416,7 @@ namespace TCPClient
                 {
                     logUtils.Log(string.Format("connectRespone.IsSucessed={0}", connectRespone.IsSucessed));
                     reader.OnBrokenNetwork += OnVPRBrokenNetwork;
+                    Vboto_clear_button_Click(sender, e);
                     bool ret = false;
                     MsgPowerOff powerOff = new MsgPowerOff();
                     ret = reader.Send(powerOff);
@@ -406,7 +455,8 @@ namespace TCPClient
             else if (vboto_connect_button.Content.Equals("Disconnect"))
             {
                 vboto_connect_button.Content = "Connect";
-                if(reader != null && reader.IsConnected)
+                readRatePerSec.Stop();
+                if (reader != null && reader.IsConnected)
                 {
                     Reader.OnApiException -= OnVRPApiException;
                     Reader.OnErrorMessage -= OnVRPErrorMessage;
@@ -437,12 +487,15 @@ namespace TCPClient
                 Dispatcher.BeginInvoke(new ThreadStart(delegate ()
                 {
                     startAsyncReadTime = DateTime.Now;
-                    txtTotalTagReads.Content = "0";
-                    totalUniqueTagsReadTextBox.Content = "0";
-                    totalTimeElapsedTextBox.Content = "0";
-                    txtTotalTagReads.Content = "0";
-                    totalUniqueTagsReadTextBox.Content = "0";
-                    txtbxReadRatePerSec.Content = "0";
+                    continuousreadElapsedTime = 0.0;
+                }));
+
+                Dispatcher.BeginInvoke(new ThreadStart(delegate ()
+                {
+                    lbltotalTagsReadValue.Content = "0";
+                    lblUniqueTagsReadValue.Content = "0";
+                    lbltotalReadTimeValue.Content = "0";
+                    lblReadRatePerSecValue.Content = "0";
                 }));
 
             });
@@ -812,7 +865,11 @@ namespace TCPClient
             if (vboto_scan_button.Content.Equals("Scan"))
             {
                 vboto_scan_button.Content = "Scaning";
+                ValidateRefreshRate();
                 startAsyncReadTime = DateTime.Now;
+                readRatePerSec.Start();
+                dispatchtimer.Start();
+
                 reader.OnInventoryReceived += OnVRPInventoryReceived;
                 tagdb.UniqueByteTID = is_unique_by_membank_checkbox.IsChecked.Value;
 
@@ -828,7 +885,19 @@ namespace TCPClient
             else if (vboto_scan_button.Content.Equals("Scaning"))
             {
                 vboto_scan_button.Content = "Scan";
+                continuousreadElapsedTime = CalculateElapsedTime();
+                readRatePerSec.Stop();
+                dispatchtimer.Stop();
                 reader.OnInventoryReceived -= OnVRPInventoryReceived;
+
+                if (!dispatchtimer.IsEnabled)
+                {
+                    Dispatcher.Invoke(new del(delegate ()
+                    {
+                        tagdb.Repaint();
+                    }));
+                }
+
                 bool ret = false;
                 MsgPowerOff msgPowerOff = new MsgPowerOff();
                 ret = reader.Send(msgPowerOff);
@@ -843,6 +912,67 @@ namespace TCPClient
                 }
             }
 
+        }
+
+        private void ValidateRefreshRate()
+        {
+            if (txtRefreshRate.Text != "")
+            {
+                int refreshrate = 0;
+                try
+                {
+                    refreshrate = Convert.ToInt32(txtRefreshRate.Text.TrimEnd());
+                }
+                catch { throw new Exception("Please input the refresh rate between 100 and 999"); }
+                if ((refreshrate < 100) || (refreshrate > 999))
+                {
+                    throw new Exception("Please input the refresh rate between 100 and 999");
+                }
+                else
+                {
+                    try
+                    {
+                        if (null != dispatchtimer)
+                        {
+                            dispatchtimer.Interval = TimeSpan.FromMilliseconds(Convert.ToDouble(txtRefreshRate.Text));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Onlog(ex);
+                    }
+                }
+            }
+            else
+            {
+                throw new Exception("Please input the refresh rate between 100 and 999");
+            }
+        }
+
+        private void Onlog(Exception ex)
+        {
+            try
+            {
+                bool disconnectReader = false;
+                if (!string.IsNullOrWhiteSpace(ex.Message))
+                {
+                    if (!(ex is NullReferenceException || ex is IndexOutOfRangeException) && !ex.Message.Contains("ItemsControl"))
+                    {
+                        Onlog(ex.Message);
+                        Dispatcher.BeginInvoke(new ThreadStart(delegate ()
+                        {
+                            
+                        }));
+                    }
+                }
+            }
+            catch (Exception)
+            { }
+        }
+
+        void Onlog(string message)
+        {
+            
         }
 
         private void Baudrate_combobox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1228,13 +1358,13 @@ namespace TCPClient
             Dispatcher.BeginInvoke(new ThreadStart(delegate ()
             {
                 tagdb.Add(tagData);
-                tagdb.Repaint();
+                //tagdb.Repaint();
             }));
 
             Dispatcher.BeginInvoke(new ThreadStart(delegate ()
             {
-                totalUniqueTagsReadTextBox.Content = tagdb.UniqueTagCount;
-                txtTotalTagReads.Content = tagdb.TotalTagCount;
+                lblUniqueTagsReadValue.Content = tagdb.UniqueTagCount;
+                lbltotalTagsReadValue.Content = tagdb.TotalTagCount;
             }));
         }
 

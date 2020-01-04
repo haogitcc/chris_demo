@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -107,63 +108,76 @@ namespace TCPClient
         public Dictionary<string, Brush> tagagingColourCache = new Dictionary<string, Brush>();
         private void dgTagResults_LoadingRow(object sender, DataGridRowEventArgs e)
         {
-            //try
-            //{
-            //    if (chkEnableTagAging)
-            //    {
-            //        var data = (TagReadRecord)e.Row.DataContext;
-            //        TimeSpan difftimeInSeconds = (DateTime.UtcNow - data.TimeStamp.ToUniversalTime());
-            //        BrushConverter brush = new BrushConverter();
-            //        if (enableTagAgingOnRead)
-            //        {
-            //            if (difftimeInSeconds.TotalSeconds < 12)
-            //            {
-            //                switch (Math.Round(difftimeInSeconds.TotalSeconds).ToString())
-            //                {
-            //                    case "5":
-            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFEEEEEE");
-            //                        break;
-            //                    case "6":
-            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFD3D3D3");
-            //                        break;
-            //                    case "7":
-            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFCCCCCC");
-            //                        break;
-            //                    case "8":
-            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFC3C3C3");
-            //                        break;
-            //                    case "9":
-            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFBBBBBB");
-            //                        break;
-            //                    case "10":
-            //                        e.Row.Background = (Brush)brush.ConvertFrom("#FFA1A1A1");
-            //                        break;
-            //                    case "11":
-            //                        e.Row.Background = new SolidColorBrush(Colors.Gray);
-            //                        break;
-            //                }
-            //                Dispatcher.BeginInvoke(new System.Threading.ThreadStart(delegate () { RetainAgingOnStopRead(data.SerialNumber.ToString(), e.Row.Background); }));
-            //            }
-            //            else
-            //            {
-            //                e.Row.Background = (Brush)brush.ConvertFrom("#FF888888");
-            //                Dispatcher.BeginInvoke(new System.Threading.ThreadStart(delegate () { RetainAgingOnStopRead(data.SerialNumber.ToString(), e.Row.Background); }));
-            //            }
-            //        }
-            //        else
-            //        {
-            //            if (tagagingColourCache.ContainsKey(data.SerialNumber.ToString()))
-            //            {
-            //                e.Row.Background = tagagingColourCache[data.SerialNumber.ToString()];
-            //            }
-            //            else
-            //            {
-            //                e.Row.Background = Brushes.White;
-            //            }
-            //        }
-            //    }
-            //}
-            //catch { }
+            try
+            {
+                if (true)//chkEnableTagAging)
+                {
+                    var data = (TagReadRecord)e.Row.DataContext;
+                    TimeSpan difftimeInSeconds = (DateTime.UtcNow - data.TimeStamp.ToUniversalTime());
+                    BrushConverter brush = new BrushConverter();
+                    if (true)//enableTagAgingOnRead)
+                    {
+                        if (difftimeInSeconds.TotalSeconds < 12)
+                        {
+                            switch (Math.Round(difftimeInSeconds.TotalSeconds).ToString())
+                            {
+                                case "5":
+                                    e.Row.Background = (Brush)brush.ConvertFrom("#FFEEEEEE");
+                                    break;
+                                case "6":
+                                    e.Row.Background = (Brush)brush.ConvertFrom("#FFD3D3D3");
+                                    break;
+                                case "7":
+                                    e.Row.Background = (Brush)brush.ConvertFrom("#FFCCCCCC");
+                                    break;
+                                case "8":
+                                    e.Row.Background = (Brush)brush.ConvertFrom("#FFC3C3C3");
+                                    break;
+                                case "9":
+                                    e.Row.Background = (Brush)brush.ConvertFrom("#FFBBBBBB");
+                                    break;
+                                case "10":
+                                    e.Row.Background = (Brush)brush.ConvertFrom("#FFA1A1A1");
+                                    break;
+                                case "11":
+                                    e.Row.Background = new SolidColorBrush(Colors.Gray);
+                                    break;
+                            }
+                            Dispatcher.BeginInvoke(new System.Threading.ThreadStart(delegate () { RetainAgingOnStopRead(data.SerialNumber.ToString(), e.Row.Background); }));
+                        }
+                        else
+                        {
+                            e.Row.Background = (Brush)brush.ConvertFrom("#FF888888");
+                            Dispatcher.BeginInvoke(new System.Threading.ThreadStart(delegate () { RetainAgingOnStopRead(data.SerialNumber.ToString(), e.Row.Background); }));
+                        }
+                    }
+                    else
+                    {
+                        if (tagagingColourCache.ContainsKey(data.SerialNumber.ToString()))
+                        {
+                            e.Row.Background = tagagingColourCache[data.SerialNumber.ToString()];
+                        }
+                        else
+                        {
+                            e.Row.Background = Brushes.White;
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void RetainAgingOnStopRead(string slno, Brush row)
+        {
+            if (!tagagingColourCache.ContainsKey(slno))
+            {
+                tagagingColourCache.Add(slno, row);
+            }
+            else
+            {
+                tagagingColourCache.Remove(slno);
+                tagagingColourCache.Add(slno, row);
+            }
         }
     }
 }
