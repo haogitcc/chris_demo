@@ -48,18 +48,17 @@ namespace TCPClient
             connect_type_combobox.ItemsSource = InitConnectType();
             connect_type_combobox.SelectedIndex = 0;
 
-            InitUI();
-
             readRatePerSec = new DispatcherTimer();
             readRatePerSec.Tick += new EventHandler(readRatePerSec_Tick);
-            readRatePerSec.Interval = TimeSpan.FromMilliseconds(300);
+            readRatePerSec.Interval = TimeSpan.FromMilliseconds(900);
             //readRatePerSec.Start();
 
             dispatchtimer = new DispatcherTimer();
             dispatchtimer.Tick += new EventHandler(dispatchtimer_Tick);
-            dispatchtimer.Interval = TimeSpan.FromMilliseconds(300);
+            dispatchtimer.Interval = TimeSpan.FromMilliseconds(50);
             //dispatchtimer.Start();
 
+            InitUI();
             //InitCmdList();
         }
 
@@ -68,7 +67,10 @@ namespace TCPClient
             try
             {
                 TagResults.tagagingColourCache.Clear();
-                tagdb.Repaint();
+                lock(tagdb)
+                {
+                    tagdb.Repaint();
+                }
             }
             catch { }
         }
@@ -454,6 +456,10 @@ namespace TCPClient
             }
             else if (vboto_connect_button.Content.Equals("Disconnect"))
             {
+                if (vboto_scan_button.Content.Equals("Scaning"))
+                {
+                    Vboto_scan_button_Click(sender, e);
+                }
                 vboto_connect_button.Content = "Connect";
                 readRatePerSec.Stop();
                 if (reader != null && reader.IsConnected)
@@ -472,32 +478,27 @@ namespace TCPClient
 
         private void Vboto_clear_button_Click(object sender, RoutedEventArgs e)
         {
-            msg_get_listview.Items.Clear();
             Thread st = new Thread(delegate ()
             {
-                this.Dispatcher.BeginInvoke(new ThreadStart(delegate ()
+                Dispatcher.BeginInvoke(new ThreadStart(delegate ()
                 {
                     lock (tagdb)
                     {
                         tagdb.Clear();
                         tagdb.Repaint();
+                        startAsyncReadTime = DateTime.Now;
+                        continuousreadElapsedTime = 0.0;
                     }
-                }
-                ));
-                Dispatcher.BeginInvoke(new ThreadStart(delegate ()
-                {
-                    startAsyncReadTime = DateTime.Now;
-                    continuousreadElapsedTime = 0.0;
                 }));
 
                 Dispatcher.BeginInvoke(new ThreadStart(delegate ()
                 {
+                    msg_get_listview.Items.Clear();
                     lbltotalTagsReadValue.Content = "0";
                     lblUniqueTagsReadValue.Content = "0";
                     lbltotalReadTimeValue.Content = "0";
                     lblReadRatePerSecValue.Content = "0";
                 }));
-
             });
             st.Start();
         }
@@ -865,10 +866,15 @@ namespace TCPClient
             if (vboto_scan_button.Content.Equals("Scan"))
             {
                 vboto_scan_button.Content = "Scaning";
-                ValidateRefreshRate();
+                vboto_clear_button.IsEnabled = false;
+               
                 startAsyncReadTime = DateTime.Now;
                 readRatePerSec.Start();
-                dispatchtimer.Start();
+                if (cbRefreshRate.IsChecked.Value == true)
+                {
+                    ValidateRefreshRate();
+                    dispatchtimer.Start();
+                }
 
                 reader.OnInventoryReceived += OnVRPInventoryReceived;
                 tagdb.UniqueByteTID = is_unique_by_membank_checkbox.IsChecked.Value;
@@ -885,18 +891,12 @@ namespace TCPClient
             else if (vboto_scan_button.Content.Equals("Scaning"))
             {
                 vboto_scan_button.Content = "Scan";
+                vboto_clear_button.IsEnabled = true;
                 continuousreadElapsedTime = CalculateElapsedTime();
                 readRatePerSec.Stop();
-                dispatchtimer.Stop();
+                if (cbRefreshRate.IsChecked.Value == true)
+                    dispatchtimer.Stop();
                 reader.OnInventoryReceived -= OnVRPInventoryReceived;
-
-                if (!dispatchtimer.IsEnabled)
-                {
-                    Dispatcher.Invoke(new del(delegate ()
-                    {
-                        tagdb.Repaint();
-                    }));
-                }
 
                 bool ret = false;
                 MsgPowerOff msgPowerOff = new MsgPowerOff();
@@ -961,7 +961,11 @@ namespace TCPClient
                         Onlog(ex.Message);
                         Dispatcher.BeginInvoke(new ThreadStart(delegate ()
                         {
-                            
+                            if (ex.Message.ToLower().Contains("the operation has timed out.") || ex.Message.ToLower().Contains("timeout") || ex.Message.ToLower().Contains("the device is not connected"))
+                            {
+                                MessageBox.Show("Connection to the reader is lost. Disconnecting the reader.", "Error : Universal Reader Assistant", MessageBoxButton.OK, MessageBoxImage.Error);
+                                disconnectReader = true;
+                            }
                         }));
                     }
                 }
@@ -972,7 +976,7 @@ namespace TCPClient
 
         void Onlog(string message)
         {
-            
+            Console.WriteLine(string.Format("######## message={0}", message));
         }
 
         private void Baudrate_combobox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1172,6 +1176,10 @@ namespace TCPClient
             protocol_combobox.ItemsSource = GetSupportProtocol();
 
             is_TagInventory_radiobutton.IsChecked = true;
+
+            TagResults.protocolColumn.Visibility = Visibility.Collapsed;
+            TagResults.frequencyColumn.Visibility = Visibility.Collapsed;
+            TagResults.phaseColumn.Visibility = Visibility.Collapsed;
         }
 
         private List<AntennaPowerStatus> GetPowers()
@@ -1357,8 +1365,12 @@ namespace TCPClient
         {
             Dispatcher.BeginInvoke(new ThreadStart(delegate ()
             {
-                tagdb.Add(tagData);
-                //tagdb.Repaint();
+                lock(tagdb)
+                {
+                    tagdb.Add(tagData);
+                    if (cbRefreshRate.IsChecked.Value == false)
+                        tagdb.Repaint();
+                }
             }));
 
             Dispatcher.BeginInvoke(new ThreadStart(delegate ()

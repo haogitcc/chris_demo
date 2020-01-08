@@ -12,9 +12,9 @@ namespace TCPClient
     /// </summary>
     public partial class TagResults : UserControl
     {
-        List<TagReadRecord> _tagList = new List<TagReadRecord>();
+        TagReadRecordBindingList _tagList = new TagReadRecordBindingList();
 
-        public List<TagReadRecord> TagList
+        public TagReadRecordBindingList TagList
         {
             get { return _tagList; }
             set { _tagList = value; }
@@ -24,7 +24,7 @@ namespace TCPClient
         {
             InitializeComponent();
             GenerateColmnsForDataGrid();
-            this.DataContext = TagList;
+            DataContext = TagList;
         }
 
         /// <summary>
@@ -32,6 +32,8 @@ namespace TCPClient
         /// </summary>
         public void GenerateColmnsForDataGrid()
         {
+            dgTagResults.AutoGenerateColumns = false;
+
             serialNoColumn.Binding = new Binding("SerialNumber");
             serialNoColumn.Header = "#";
             serialNoColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Auto);
@@ -80,7 +82,7 @@ namespace TCPClient
             phaseColumn.Header = "Phase";
             phaseColumn.Width = new DataGridLength(1, DataGridLengthUnitType.Star);
 
-            dgTagResults.ItemsSource = _tagList;
+            dgTagResults.ItemsSource = TagList;
         }
 
         private void HeaderCheckBox_Checked(object sender, RoutedEventArgs e)

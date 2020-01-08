@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 namespace TCPClient
@@ -26,9 +27,12 @@ namespace TCPClient
         static long UniqueTagCounts = 0;
         static long TotalTagCounts = 0;
 
+        private readonly object _datasLock = new object();
+
         public TagDatabase()
         {
-
+            // GUI can't keep up with fast updates, so disable automatic triggers
+            _tagList.RaiseListChangedEvents = false;
         }
 
         public TagDatabase(ReadTagParameter param)
@@ -60,6 +64,8 @@ namespace TCPClient
             UniqueTagCounts = 0;
             TotalTagCounts = 0;
             _tagList.Clear();
+            // Clear doesn't fire notifications on its own
+            _tagList.ResetBindings();
         }
 
         public void Update(ReadTagParameter param)

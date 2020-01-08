@@ -46,7 +46,7 @@
                 <ComboBox x:Name="baudrate_combobox" MinWidth="80" Margin="5" VerticalContentAlignment="Center" SelectionChanged="Baudrate_combobox_SelectionChanged" IsEnabled="False"/>
             </StackPanel>
             <Button x:Name="vboto_connect_button" Content="Connect" Width="80" Margin="5" Click="Vboto_connect_button_Click" />
-            <Button x:Name="vboto_clear_button" Content="Clear" Width="80" Margin="5,0,5,5" Click="Vboto_clear_button_Click" Height="20" VerticalAlignment="Bottom" />
+            <Button x:Name="vboto_clear_button" Content="Clear" Width="80" Margin="5" Click="Vboto_clear_button_Click" RenderTransformOrigin="0.412,0.45" />
             <CheckBox x:Name="is_unique_by_membank_checkbox" Content="IsUniqueByTID" Margin="5" MinWidth="80"/>
 
             <ComboBox Visibility="Visible" Margin="3" VerticalContentAlignment="Center" ToolTip="Select to get counts in big num format" ToolTipService.ShowOnDisabled="True" SelectedIndex="0" HorizontalAlignment="Left" Name="cbxBigNum" SelectionChanged="cbxBigNum_SelectionChanged">
@@ -57,7 +57,8 @@
                 <ComboBoxItem Content="Summary of Tag Result"/>
             </ComboBox>
 
-            <TextBox Grid.Row="1" Grid.Column="3" Margin="3" Text="900" Width="50" VerticalContentAlignment="Center" ToolTip=" Refresh [TagResults] for every refresh rate interval set " ToolTipService.ShowOnDisabled="True" MaxLength="3"  Name="txtRefreshRate" AutoWordSelection="False" />
+            <CheckBox Name="cbRefreshRate" Content="Rate" VerticalContentAlignment="Center" IsChecked="True" IsEnabled="False"/>
+            <TextBox Grid.Row="1" Grid.Column="3" IsEnabled="False" Margin="3" Text="900" Width="50" VerticalContentAlignment="Center" ToolTip=" Refresh [TagResults] for every refresh rate interval set " ToolTipService.ShowOnDisabled="True" MaxLength="3"  Name="txtRefreshRate" AutoWordSelection="False" />
         </StackPanel>
         <TabControl x:Name="main_tabcontrol"  Grid.Column="0" Grid.Row="1" Margin="5">
             <TabItem Header="API">
